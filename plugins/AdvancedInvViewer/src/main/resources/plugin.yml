@@ -1,0 +1,27 @@
+name: AdvancedInvViewer
+version: 1.0.0
+main: com.kingdomcraft.invviewer.AdvancedInvViewer
+api-version: '1.21'
+author: KingdomCraft
+description: Advanced real-time inventory viewer with live updates
+
+commands:
+  invsee:
+    description: View player inventory in real-time
+    usage: /invsee <player>
+    permission: invviewer.use
+    aliases: [inv, viewinv]
+
+permissions:
+  invviewer.use:
+    description: Allows viewing player inventories
+    default: op
+  invviewer.modify:
+    description: Allows modifying items in viewed inventories
+    default: op
+  invviewer.armor:
+    description: Allows viewing armor slots
+    default: op
+  invviewer.enderchest:
+    description: Allows viewing ender chests
+    default: op

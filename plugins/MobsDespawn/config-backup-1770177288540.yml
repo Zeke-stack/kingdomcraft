@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════════════════════════
+#           Mobs Despawn Plugin V1.0.0 Settings
+#                   with Enhanced Save System
+# ═══════════════════════════════════════════════════════════════
+
+# ═══ Basic Settings ═══
+# Prevent disabled mobs from spawning (true = enabled, false = disabled)
+prevent-spawning: true
+
+# Remove existing mobs automatically when disabled (true = enabled, false = disabled)
+# Warning: May affect performance if there are many mobs
+remove-existing: false
+
+# List of disabled mobs (automatically updated through GUI)
+disabled-mobs: []
+
+# Management GUI title (customizable)
+gui-title: §6§lMobs Despawn Manager
+
+# ═══ Auto-Save Settings ═══
+# Enable auto-save (true = enabled, false = disabled)
+auto-save: true
+
+# Auto-save interval in seconds (default: 300 = 5 minutes)
+auto-save-interval: 300
+
+# ═══ Statistics Settings ═══
+statistics:
+  # Enable statistics (true = enabled, false = disabled)
+  enabled: true
+  # Total prevented mobs
+  total-mobs-prevented: 0
+  # Total removed mobs
+  total-mobs-removed: 0
+
+# ═══ System Information (do not modify manually) ═══
+# Configuration file version
+config-version: 1.0.0
+# Last save date (updated automatically)
+last-saved: 1770177254969
+# Total runtime sessions count
+total-sessions: 1
+# Last shutdown date (updated automatically)
+last-shutdown: 1770177207894
+
+# Additional settings (optional)
+settings:
+  # Custom messages
+  messages:
+    no-permission: §cYou don't have permission to use this command!
+    plugin-reload: §aPlugin reloaded successfully!
+    mob-disabled: §c{mob} spawning disabled
+    mob-enabled: §a{mob} spawning enabled
+    mobs-removed: §e{count} {mob} mobs removed
+  
+  # Advanced settings
+  advanced:
+    # Existing mobs check interval (in seconds) - 0 to disable periodic checking
+    check-interval: 0
+    # Maximum allowed mobs per type (-1 = unlimited)
+    max-mobs-per-type: -1

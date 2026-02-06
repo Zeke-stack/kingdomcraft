@@ -1,0 +1,8 @@
+# Download LuckPerms
+# Place this in plugins/ folder before deployment
+
+# LuckPerms Download Link:
+https://download.luckperms.net/1556/bukkit/loader/LuckPerms-Bukkit-5.4.141.jar
+
+# To download automatically during build (optional):
+# wget -O plugins/LuckPerms.jar https://download.luckperms.net/1556/bukkit/loader/LuckPerms-Bukkit-5.4.141.jar

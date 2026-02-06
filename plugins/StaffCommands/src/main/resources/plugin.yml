@@ -1,0 +1,104 @@
+name: StaffCommands
+version: 1.0.0
+main: com.kingdomcraft.staffcommands.StaffCommands
+api-version: '1.21'
+author: KingdomCraft
+description: Custom staff management commands for KingdomCraft server
+
+commands:
+  spectate:
+    description: Enter spectator mode
+    usage: /spectate
+    permission: staff.spectate
+  survival:
+    description: Return to survival mode
+    usage: /survival
+    permission: staff.survival
+  to:
+    description: Teleport to a player
+    usage: /to <player>
+    permission: staff.to
+  bring:
+    description: Bring a player to you
+    usage: /bring <player>
+    permission: staff.bring
+  freeze:
+    description: Freeze/unfreeze a player
+    usage: /freeze <player>
+    permission: staff.freeze
+  history:
+    description: View player chat history
+    usage: /history <player> [lines]
+    permission: staff.history
+  hint:
+    description: Send a hint message to all players
+    usage: /hint <message>
+    permission: staff.hint
+  announce:
+    description: Send an announcement to all players
+    usage: /announce <message>
+    permission: staff.announce
+  chatannounce:
+    description: Send a custom formatted announcement
+    usage: /chatannounce <message> <bold/italic> <color>
+    permission: staff.chatannounce
+  audit:
+    description: View all staff action logs
+    usage: /audit [player]
+    permission: staff.audit
+
+permissions:
+  staff.spectate:
+    description: Allows entering spectator mode
+    default: op
+  staff.survival:
+    description: Allows returning to survival mode
+    default: op
+  staff.to:
+    description: Allows teleporting to players
+    default: op
+  staff.bring:
+    description: Allows bringing players
+    default: op
+  staff.freeze:
+    description: Allows freezing players
+    default: op
+  staff.history:
+    description: Allows viewing chat history
+    default: op
+  staff.hint:
+    description: Allows sending hint messages
+    default: op
+  staff.announce:
+    description: Allows sending announcements
+    default: op
+  staff.chatannounce:
+    description: Allows sending custom announcements
+    default: op
+  staff.audit:
+    description: Allows viewing audit logs
+    default: op
+  staff.moderator:
+    description: Moderator permission bundle
+    default: false
+    children:
+      staff.spectate: true
+      staff.survival: true
+      staff.to: true
+      staff.bring: true
+      staff.freeze: true
+      staff.history: true
+  staff.administrator:
+    description: Administrator permission bundle
+    default: false
+    children:
+      staff.moderator: true
+      staff.hint: true
+      staff.announce: true
+      staff.chatannounce: true
+  staff.eventstaff:
+    description: Event staff permission bundle
+    default: false
+    children:
+      staff.administrator: true
+      staff.audit: true

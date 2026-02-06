@@ -1,0 +1,67 @@
+# LuckPerms Permission Setup Script
+# Run these commands in-game or console after installing LuckPerms
+
+# Create groups
+lp creategroup moderator
+lp creategroup administrator  
+lp creategroup eventstaff
+lp creategroup founder
+
+# ============================================
+# MODERATOR PERMISSIONS
+# ============================================
+lp group moderator permission set staff.moderator true
+lp group moderator permission set invviewer.use true
+lp group moderator permission set invviewer.armor true
+lp group moderator permission set minecraft.command.kick true
+
+# ============================================
+# ADMINISTRATOR PERMISSIONS
+# ============================================
+lp group administrator parent add moderator
+lp group administrator permission set staff.administrator true
+lp group administrator permission set invviewer.modify true
+lp group administrator permission set minecraft.command.ban true
+lp group administrator permission set minecraft.command.pardon true
+lp group administrator permission set minecraft.command.ban-ip true
+
+# ============================================
+# EVENT STAFF PERMISSIONS
+# ============================================
+lp group eventstaff parent add administrator
+lp group eventstaff permission set staff.eventstaff true
+lp group eventstaff permission set coreprotect.* true
+lp group eventstaff permission set itemblocker.* true
+lp group eventstaff permission set minecraft.command.give true
+lp group eventstaff permission set minecraft.command.summon true
+lp group eventstaff permission set minecraft.command.reload true
+lp group eventstaff permission set minecraft.command.stop true
+lp group eventstaff permission set minecraft.command.gamemode true
+lp group eventstaff permission set minecraft.command.kill true
+lp group eventstaff permission set invviewer.enderchest true
+
+# ============================================
+# FOUNDER PERMISSIONS
+# ============================================
+lp group founder parent add eventstaff
+lp group founder permission set * true
+lp group founder permission set minecraft.command.op true
+lp group founder permission set minecraft.command.deop true
+
+# Set group display names and colors
+lp group moderator meta setprefix "&b[Moderator] "
+lp group administrator meta setprefix "&c[Admin] "
+lp group eventstaff meta setprefix "&d[Event Staff] "
+lp group founder meta setprefix "&6[Founder] "
+
+# Set group weights (higher = more important)
+lp group moderator setweight 10
+lp group administrator setweight 20
+lp group eventstaff setweight 30
+lp group founder setweight 100
+
+# Example: Add players to groups
+# lp user <username> parent set moderator
+# lp user <username> parent set administrator
+# lp user <username> parent set eventstaff
+# lp user <username> parent set founder

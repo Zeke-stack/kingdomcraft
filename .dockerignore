@@ -1,0 +1,11 @@
+# Ignore local Windows batch file
+run.bat
+
+# Ignore logs
+logs/
+
+# Ignore cache
+cache/
+
+# Ignore crash reports
+crash-reports/

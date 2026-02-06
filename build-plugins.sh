@@ -50,6 +50,22 @@ fi
 cd ../..
 echo ""
 
+# Build KingdomCraft
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Building KingdomCraft..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+cd plugins/KingdomCraft
+mvn clean package -q
+if [ $? -eq 0 ]; then
+    cp target/KingdomCraft.jar ../../KingdomCraft.jar
+    echo "✓ KingdomCraft.jar created"
+else
+    echo "❌ Failed to build KingdomCraft"
+    exit 1
+fi
+cd ../..
+echo ""
+
 echo "╔════════════════════════════════════════╗"
 echo "║  ✓ Build Complete!                    ║"
 echo "╚════════════════════════════════════════╝"
@@ -57,6 +73,7 @@ echo ""
 echo "Plugins created in plugins/ directory:"
 echo "  • AdvancedInvViewer.jar"
 echo "  • StaffCommands.jar"
+echo "  • KingdomCraft.jar"
 echo ""
 echo "Next steps:"
 echo "1. Download LuckPerms and place in plugins/"

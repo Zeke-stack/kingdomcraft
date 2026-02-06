@@ -1,0 +1,96 @@
+name: KingdomCraft
+version: 1.0.0
+main: com.kingdomcraft.KingdomCraft
+api-version: '1.21'
+author: KingdomCraft Server
+description: Kingdom management system with death mechanics and character creation
+
+commands:
+  revive:
+    description: Revive a dead player
+    usage: /revive <player>
+    permission: kingdomcraft.staff.revive
+  createcharacter:
+    description: Create a new character after death
+    usage: /createcharacter <name> <personality>
+  createkingdom:
+    description: Create a new kingdom
+    usage: /createkingdom <name>
+    permission: kingdomcraft.staff.createkingdom
+  deletekingdom:
+    description: Delete a kingdom
+    usage: /deletekingdom <kingdom>
+    permission: kingdomcraft.staff.deletekingdom
+  transferkingdom:
+    description: Transfer kingdom ownership
+    usage: /transferkingdom <kingdom> <player>
+    permission: kingdomcraft.staff.transferkingdom
+  renamekingdom:
+    description: Rename your kingdom
+    usage: /renamekingdom <name>
+    permission: kingdomcraft.leader.rename
+  reqlistkingdom:
+    description: List all join requests
+    usage: /reqlistkingdom
+    permission: kingdomcraft.leader
+  reqacceptkingdom:
+    description: Accept a join request
+    usage: /reqacceptkingdom <player>
+    permission: kingdomcraft.leader
+  reqdenykingdom:
+    description: Deny a join request
+    usage: /reqdenykingdom <player>
+    permission: kingdomcraft.leader
+  reqacceptallkingdom:
+    description: Accept all join requests
+    usage: /reqacceptallkingdom
+    permission: kingdomcraft.leader
+  reqdenyallkingdom:
+    description: Deny all join requests
+    usage: /reqdenyallkingdom
+    permission: kingdomcraft.leader
+  kickkingdom:
+    description: Kick a player from kingdom
+    usage: /kickkingdom <player>
+    permission: kingdomcraft.leader
+  reqoffkingdom:
+    description: Disable join requests
+    usage: /reqoffkingdom
+    permission: kingdomcraft.leader
+  reqonkingdom:
+    description: Enable join requests
+    usage: /reqonkingdom
+    permission: kingdomcraft.leader
+  kingdomlist:
+    description: List all kingdom members
+    usage: /kingdomlist
+    permission: kingdomcraft.leader
+  leavekingdom:
+    description: Leave your current kingdom
+    usage: /leavekingdom
+  joinkingdom:
+    description: Request to join a kingdom
+    usage: /joinkingdom <kingdom>
+
+permissions:
+  kingdomcraft.staff.revive:
+    description: Allows reviving dead players
+    default: op
+  kingdomcraft.staff.createkingdom:
+    description: Allows creating kingdoms
+    default: op
+  kingdomcraft.staff.deletekingdom:
+    description: Allows deleting kingdoms
+    default: op
+  kingdomcraft.staff.transferkingdom:
+    description: Allows transferring kingdom ownership
+    default: op
+  kingdomcraft.leader:
+    description: Kingdom leader permissions
+    default: false
+  kingdomcraft.leader.rename:
+    description: Allows renaming kingdom
+    default: false
+  kingdomcraft.protected:
+    description: Marks a kingdom as protected (3-day immunity)
+    default: false

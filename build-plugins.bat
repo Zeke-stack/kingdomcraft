@@ -55,6 +55,24 @@ if %ERRORLEVEL% EQU 0 (
 cd ..\..
 echo.
 
+REM Build KingdomCraft
+echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo Building KingdomCraft...
+echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cd plugins\KingdomCraft
+call mvn clean package -q
+if %ERRORLEVEL% EQU 0 (
+    copy target\KingdomCraft.jar ..\..\KingdomCraft.jar >nul
+    echo ✓ KingdomCraft.jar created
+) else (
+    echo ❌ Failed to build KingdomCraft
+    cd ..\..
+    pause
+    exit /b 1
+)
+cd ..\..
+echo.
+
 echo ╔════════════════════════════════════════╗
 echo ║  ✓ Build Complete!                    ║
 echo ╚════════════════════════════════════════╝
@@ -62,6 +80,7 @@ echo.
 echo Plugins created in plugins\ directory:
 echo   • AdvancedInvViewer.jar
 echo   • StaffCommands.jar
+echo   • KingdomCraft.jar
 echo.
 echo Next steps:
 echo 1. Download LuckPerms and place in plugins\

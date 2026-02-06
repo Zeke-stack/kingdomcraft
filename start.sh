@@ -22,6 +22,12 @@ if [ -d "/data/world" ]; then
     cp -r /data/plugins ./plugins 2>/dev/null || echo "Plugins already present"
 fi
 
+# Disable broken datapack (no_underground_lava) to prevent registry errors
+if [ -d "./world/datapacks/no_underground_lava" ]; then
+    echo "Disabling no_underground_lava datapack (registry error fix)..."
+    rm -rf ./world/datapacks/no_underground_lava
+fi
+
 # Start the server
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \

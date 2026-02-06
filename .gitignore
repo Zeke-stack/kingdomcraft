@@ -15,6 +15,7 @@ world_nether/stats/
 world_the_end/playerdata/
 world_the_end/stats/
 plugins/*/data/
+plugins/CoreProtect/database.db
 run.bat
 *.jar.old
 versions/

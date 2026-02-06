@@ -21,6 +21,10 @@ lp group moderator permission set staff.moderator true
 lp group moderator permission set invviewer.use true
 lp group moderator permission set invviewer.armor true
 lp group moderator permission set minecraft.command.kick true
+lp group moderator permission set staff.spectate true
+lp group moderator permission set staff.survival true
+lp group moderator permission set staff.to true
+lp group moderator permission set staff.history true
 
 # ============================================
 # ADMINISTRATOR PERMISSIONS
@@ -31,6 +35,10 @@ lp group administrator permission set invviewer.modify true
 lp group administrator permission set minecraft.command.ban true
 lp group administrator permission set minecraft.command.pardon true
 lp group administrator permission set minecraft.command.ban-ip true
+lp group administrator permission set staff.bring true
+lp group administrator permission set staff.freeze true
+lp group administrator permission set staff.hint true
+lp group administrator permission set staff.audit true
 
 # ============================================
 # EVENT STAFF PERMISSIONS
@@ -46,6 +54,8 @@ lp group eventstaff permission set minecraft.command.stop true
 lp group eventstaff permission set minecraft.command.gamemode true
 lp group eventstaff permission set minecraft.command.kill true
 lp group eventstaff permission set invviewer.enderchest true
+lp group eventstaff permission set staff.announce true
+lp group eventstaff permission set staff.chatannounce true
 lp group eventstaff permission set kingdomcraft.staff.revive true
 lp group eventstaff permission set kingdomcraft.staff.createkingdom true
 lp group eventstaff permission set kingdomcraft.staff.deletekingdom true

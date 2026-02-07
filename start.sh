@@ -63,6 +63,19 @@ sed -i 's/rcon.password=$/rcon.password=kc-rcon-2025/' server.properties
 grep -q "enable-rcon=true" server.properties && echo "RCON: enabled" || echo "RCON: FAILED to enable!"
 grep -q "rcon.password=kc-rcon-2025" server.properties && echo "RCON password: set" || echo "RCON password: MISSING!"
 
+# Start Discord bot in background (uses localhost RCON since it's in the same container)
+echo "Starting Discord bot..."
+export RCON_HOST=localhost
+export RCON_PORT=25575
+export RCON_PASSWORD=kc-rcon-2025
+cd /server/discord-bot && node index.js &
+DISCORD_BOT_PID=$!
+echo "Discord bot started (PID: $DISCORD_BOT_PID)"
+cd /server
+
+# Set the Discord bot URL for the MC plugin (localhost since same container)
+export DISCORD_BOT_URL=http://localhost:3000
+
 # Start the server
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \
@@ -89,6 +102,13 @@ java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
 
 # Save world data back to persistent storage on shutdown
 echo "Server stopped, backing up world data..."
+
+# Stop Discord bot
+if [ -n "$DISCORD_BOT_PID" ]; then
+    echo "Stopping Discord bot..."
+    kill $DISCORD_BOT_PID 2>/dev/null || true
+fi
+
 if [ ! -d "/data" ]; then
     mkdir -p /data
 fi

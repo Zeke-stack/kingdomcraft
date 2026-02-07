@@ -16,6 +16,12 @@ RUN cd plugins/AdvancedInvViewer && mvn clean package -q && \
 # Runtime stage
 FROM eclipse-temurin:21-jre-jammy
 
+# Install Node.js 20 for Discord bot
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /server
 
@@ -24,6 +30,9 @@ COPY . .
 
 # Save a backup of server.properties that won't be overwritten by volume data
 RUN cp server.properties /tmp/server.properties.bak
+
+# Install Discord bot dependencies
+RUN cd discord-bot && npm install --production && cd ..
 
 # Copy built plugins from builder stage
 COPY --from=builder /build/plugins/AdvancedInvViewer/target/AdvancedInvViewer.jar ./plugins/AdvancedInvViewer.jar
@@ -38,6 +47,9 @@ EXPOSE 25565
 
 # Expose RCON port
 EXPOSE 25575
+
+# Expose bot API port
+EXPOSE 3000
 
 # Expose voice chat port if needed
 EXPOSE 24454/udp

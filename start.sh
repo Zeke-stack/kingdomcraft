@@ -56,6 +56,13 @@ fi
 echo "Applying latest server.properties..."
 cp -f /tmp/server.properties.bak ./server.properties 2>/dev/null || echo "No server.properties backup found"
 
+# Force-enable RCON in server.properties (in case persistent volume overwrote it)
+echo "Ensuring RCON is enabled..."
+sed -i 's/enable-rcon=false/enable-rcon=true/' server.properties
+sed -i 's/rcon.password=$/rcon.password=kc-rcon-2025/' server.properties
+grep -q "enable-rcon=true" server.properties && echo "RCON: enabled" || echo "RCON: FAILED to enable!"
+grep -q "rcon.password=kc-rcon-2025" server.properties && echo "RCON password: set" || echo "RCON password: MISSING!"
+
 # Start the server
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \

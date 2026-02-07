@@ -51,24 +51,42 @@ async function log(title, description, color = 0x808080) {
 }
 
 // ─── Status Channel Updater ───
+async function cleanStatusChannel(channel) {
+    // Delete all old bot messages to prevent duplicates
+    try {
+        const messages = await channel.messages.fetch({ limit: 20 });
+        const botMessages = messages.filter(m => m.author.id === client.user.id);
+        for (const [, msg] of botMessages) {
+            try { await msg.delete(); } catch {}
+        }
+    } catch (err) {
+        console.error('[Status] Failed to clean old messages:', err.message);
+    }
+    statusMessageId = null;
+}
+
 async function updateStatusEmbed() {
     if (!STATUS_CHANNEL_ID) return;
     try {
         const channel = await client.channels.fetch(STATUS_CHANNEL_ID);
         if (!channel) return;
 
+        const status = serverOnline
+            ? (serverLocked ? 'Locked' : 'Online')
+            : 'Offline';
+
+        const statusDot = serverOnline ? '🟢' : '🔴';
+
         const embed = new EmbedBuilder()
-            .setTitle('⚔️ KingdomCraft Server Status')
-            .setColor(serverOnline ? (serverLocked ? 0xff8800 : 0x00ff00) : 0xff0000)
-            .addFields(
-                { name: '📡 Status', value: serverOnline ? (serverLocked ? '🔒 Locked (OP Only)' : '🟢 Online') : '🔴 Offline', inline: true },
-                { name: '👥 Players', value: `${playerCount}`, inline: true },
-                { name: '🌐 IP', value: '`continents.cc`', inline: true },
-                { name: '📦 Version', value: 'Paper 1.21.1', inline: true },
-                { name: '🔗 RCON', value: rcon.isConnected() ? '✅ Connected' : '❌ Disconnected', inline: true },
-                { name: '🔒 Lock', value: serverLocked ? '🔴 Locked' : '🟢 Open', inline: true },
+            .setTitle('KingdomCraft Server')
+            .setColor(serverOnline ? 0x00ff00 : 0xff0000)
+            .setDescription(
+                `${statusDot} **${status}**\n\n` +
+                `**Players:** ${playerCount}\n` +
+                `**IP:** \`continents.cc\`\n` +
+                `**Version:** Paper 1.21.1`
             )
-            .setFooter({ text: 'KingdomCraft ⚔️ • Updates every 30s' })
+            .setFooter({ text: 'Last updated' })
             .setTimestamp();
 
         // Edit existing message or send new one
@@ -78,12 +96,13 @@ async function updateStatusEmbed() {
                 await msg.edit({ embeds: [embed] });
                 return;
             } catch {
-                // Message deleted, send a new one
                 statusMessageId = null;
             }
         }
 
-        // Send new status message
+        // Clean any old bot messages before sending a new one
+        await cleanStatusChannel(channel);
+
         const sent = await channel.send({ embeds: [embed] });
         statusMessageId = sent.id;
     } catch (err) {
@@ -186,12 +205,12 @@ client.once('clientReady', async () => {
             activities: [{
                 name: serverOnline
                     ? (serverLocked
-                        ? `🔒 LOCKED | ${playerCount} online`
-                        : `${playerCount} player${playerCount !== 1 ? 's' : ''} online | continents.cc`)
+                        ? `LOCKED | ${playerCount} online`
+                        : `${playerCount} player${playerCount !== 1 ? 's' : ''} online`)
                     : 'Server Offline',
                 type: ActivityType.Watching
             }],
-            status: serverOnline ? (serverLocked ? 'dnd' : 'online') : 'dnd'
+            status: serverOnline ? 'online' : 'dnd'
         });
 
         await updateStatusEmbed();

@@ -54,6 +54,12 @@ public class DeathListener implements Listener {
             player.sendMessage(Component.text("You are protected as a new kingdom leader!").color(NamedTextColor.GREEN));
             return;
         }
+
+        // Keep inventory and levels on death
+        event.setKeepInventory(true);
+        event.setKeepLevel(true);
+        event.getDrops().clear();
+        event.setDroppedExp(0);
         
         // Mark player as dead
         plugin.getKingdomData().setPlayerDead(player.getUniqueId(), true);

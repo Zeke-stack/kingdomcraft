@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, REST, Routes, ActivityType } = require('discord.js');
 const express = require('express');
 const RconManager = require('./rcon');
@@ -188,6 +189,7 @@ client.once('ready', async () => {
 // ─── Chat Sync: Discord → Minecraft ───
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+    if (!message.guild || message.guild.id !== GUILD_ID) return;
     if (message.channel.id !== CHAT_CHANNEL_ID) return;
 
     // Don't forward commands
@@ -211,6 +213,10 @@ client.on('messageCreate', async (message) => {
 // ─── Slash Command Handler ───
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
+    if (!interaction.guild || interaction.guild.id !== GUILD_ID) {
+        await interaction.reply({ content: '❌ This bot only works in the KingdomCraft server.', ephemeral: true });
+        return;
+    }
 
     const { commandName } = interaction;
     const user = interaction.user.tag;

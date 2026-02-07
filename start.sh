@@ -112,7 +112,55 @@ else:
     print('Lottcha already in ops.json (verified)')
 " 2>/dev/null || echo "Python not available, ops.json unchanged"
 
-# Start the server
+# ── Shutdown handler: backup world data to persistent storage ──
+backup_and_exit() {
+    echo ""
+    echo "=== SHUTDOWN SIGNAL RECEIVED ==="
+    
+    # Tell the MC server to save and stop
+    if [ -n "$MC_PID" ] && kill -0 $MC_PID 2>/dev/null; then
+        echo "Sending 'stop' to MC server..."
+        # Save all first
+        kill -SIGTERM $MC_PID 2>/dev/null || true
+        # Wait for MC server to exit (up to 30 seconds)
+        for i in $(seq 1 30); do
+            if ! kill -0 $MC_PID 2>/dev/null; then
+                echo "MC server stopped after ${i}s."
+                break
+            fi
+            sleep 1
+        done
+        # Force kill if still alive
+        if kill -0 $MC_PID 2>/dev/null; then
+            echo "Force killing MC server..."
+            kill -9 $MC_PID 2>/dev/null || true
+        fi
+    fi
+
+    echo "Backing up world data to persistent storage..."
+    mkdir -p /data
+
+    cp -rf ./world /data/ 2>/dev/null && echo "  world: OK" || echo "  world: FAILED"
+    cp -rf ./world_nether /data/ 2>/dev/null && echo "  nether: OK" || echo "  nether: SKIPPED"
+    cp -rf ./world_the_end /data/ 2>/dev/null && echo "  end: OK" || echo "  end: SKIPPED"
+    cp -rf ./plugins /data/ 2>/dev/null && echo "  plugins: OK" || echo "  plugins: FAILED"
+
+    echo "Backup complete!"
+
+    # Stop Discord bot
+    if [ -n "$DISCORD_BOT_PID" ] && kill -0 $DISCORD_BOT_PID 2>/dev/null; then
+        echo "Stopping Discord bot..."
+        kill $DISCORD_BOT_PID 2>/dev/null || true
+    fi
+
+    echo "=== SHUTDOWN COMPLETE ==="
+    exit 0
+}
+
+# Trap SIGTERM and SIGINT so backup always runs
+trap backup_and_exit SIGTERM SIGINT
+
+# Start the server in the background so we can trap signals
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \
     -XX:+ParallelRefProcEnabled \
@@ -134,24 +182,14 @@ java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:MaxTenuringThreshold=1 \
     -Dusing.aikars.flags=https://mcflags.emc.gs \
     -Daikars.new.flags=true \
-    -jar paper-1.21.1-133.jar nogui
+    -jar paper-1.21.1-133.jar nogui &
+MC_PID=$!
+echo "MC server started (PID: $MC_PID)"
 
-# Save world data back to persistent storage on shutdown
-echo "Server stopped, backing up world data..."
+# Wait for the MC server process — if it exits on its own, also backup
+wait $MC_PID 2>/dev/null
+MC_EXIT=$?
+echo "MC server exited with code: $MC_EXIT"
 
-# Stop Discord bot
-if [ -n "$DISCORD_BOT_PID" ]; then
-    echo "Stopping Discord bot..."
-    kill $DISCORD_BOT_PID 2>/dev/null || true
-fi
-
-if [ ! -d "/data" ]; then
-    mkdir -p /data
-fi
-
-cp -r ./world /data/ 2>/dev/null || echo "Failed to backup world"
-cp -r ./world_nether /data/ 2>/dev/null || echo "Failed to backup nether"
-cp -r ./world_the_end /data/ 2>/dev/null || echo "Failed to backup end"
-cp -r ./plugins /data/ 2>/dev/null || echo "Failed to backup plugins"
-
-echo "Backup complete!"
+# Run backup (in case server exited on its own, not via signal)
+backup_and_exit

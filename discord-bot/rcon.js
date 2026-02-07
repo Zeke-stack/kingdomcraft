@@ -48,7 +48,9 @@ class RconManager {
             });
         } catch (err) {
             this.connected = false;
-            console.error(`[RCON] ❌ Failed to connect to ${this.host}:${this.port} — ${err.message}`);
+            console.error(`[RCON] ❌ Failed to connect to ${this.host}:${this.port}`);
+            console.error(`[RCON] Error name: ${err.name}, code: ${err.code}, message: ${err.message}`);
+            console.error('[RCON] Full error:', err);
             this.scheduleRetry(20000);
         }
     }

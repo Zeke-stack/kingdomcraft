@@ -139,7 +139,7 @@ async function deployCommands() {
 }
 
 // ─── Bot Ready ───
-client.on('ready', async () => {
+client.once('clientReady', async () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
     
     try {
@@ -148,10 +148,13 @@ client.on('ready', async () => {
         console.error('[Bot] Command deploy error:', err.message);
     }
     
-    // Connect RCON in background (don't block or crash)
-    rcon.connect().catch(err => {
-        console.error('[Bot] RCON initial connect failed (will retry):', err.message);
-    });
+    // Connect RCON after delay (MC server needs time to start RCON listener)
+    console.log('[Bot] Waiting 30s for MC server RCON to be ready...');
+    setTimeout(() => {
+        rcon.connect().catch(err => {
+            console.error('[Bot] RCON initial connect failed (will retry):', err.message);
+        });
+    }, 30000);
 
     // Initial status
     client.user.setPresence({

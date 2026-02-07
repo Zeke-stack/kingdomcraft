@@ -20,7 +20,7 @@ class RconManager {
 
         console.log(`[RCON] Connecting to ${this.host}:${this.port}...`);
 
-        if (!this.host || this.host === 'localhost') {
+        if (!this.host) {
             console.log('[RCON] No RCON_HOST set, skipping connection. Set RCON_HOST env var.');
             return;
         }

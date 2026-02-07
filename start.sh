@@ -16,15 +16,28 @@ echo "eula=true" > eula.txt
 # Ensure world data is properly loaded
 if [ -d "/data/world" ]; then
     echo "Found existing world data in persistent storage, syncing..."
-    # Merge persistent data INTO server dir (persistent data wins for world chunks)
-    cp -rn /data/world/* ./world/ 2>/dev/null || true
-    cp -rn /data/world_nether/* ./world_nether/ 2>/dev/null || true
-    cp -rn /data/world_the_end/* ./world_the_end/ 2>/dev/null || true
     
-    # For playerdata, persistent storage always wins (latest inventories)
+    # Persistent storage has the REAL latest data — it always wins
+    # Copy everything from persistent storage, overwriting Docker image files
+    cp -rf /data/world/* ./world/ 2>/dev/null || true
+    cp -rf /data/world_nether/* ./world_nether/ 2>/dev/null || true
+    cp -rf /data/world_the_end/* ./world_the_end/ 2>/dev/null || true
+    
+    # Explicitly ensure playerdata, advancements, and stats are restored
     if [ -d "/data/world/playerdata" ]; then
         echo "Restoring player data from persistent storage..."
+        mkdir -p ./world/playerdata
         cp -rf /data/world/playerdata/* ./world/playerdata/ 2>/dev/null || true
+    fi
+    if [ -d "/data/world/advancements" ]; then
+        echo "Restoring advancements from persistent storage..."
+        mkdir -p ./world/advancements
+        cp -rf /data/world/advancements/* ./world/advancements/ 2>/dev/null || true
+    fi
+    if [ -d "/data/world/stats" ]; then
+        echo "Restoring stats from persistent storage..."
+        mkdir -p ./world/stats
+        cp -rf /data/world/stats/* ./world/stats/ 2>/dev/null || true
     fi
     
     # Restore plugin data from persistent storage

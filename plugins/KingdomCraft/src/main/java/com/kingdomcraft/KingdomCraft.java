@@ -8,12 +8,14 @@ import com.kingdomcraft.listeners.DeathListener;
 import com.kingdomcraft.listeners.JoinLeaveListener;
 import com.kingdomcraft.npc.NPCListener;
 import com.kingdomcraft.npc.NPCManager;
+import com.kingdomcraft.recipes.RecipeManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class KingdomCraft extends JavaPlugin {
     private KingdomData kingdomData;
     private DiscordWebhook discordWebhook;
     private NPCManager npcManager;
+    private RecipeManager recipeManager;
     
     @Override
     public void onEnable() {
@@ -28,6 +30,10 @@ public class KingdomCraft extends JavaPlugin {
         
         // Initialize NPC manager
         npcManager = new NPCManager(this);
+        
+        // Register custom recipes
+        recipeManager = new RecipeManager(this);
+        recipeManager.registerRecipes();
         
         // Register listeners
         getServer().getPluginManager().registerEvents(new DeathListener(this), this);

@@ -172,12 +172,12 @@ client.once('clientReady', async () => {
     }
     
     // Connect RCON after delay (MC server needs time to start RCON listener)
-    console.log('[Bot] Waiting 30s for MC server RCON to be ready...');
+    console.log('[Bot] Waiting 45s for MC server RCON to be ready...');
     setTimeout(() => {
         rcon.connect().catch(err => {
             console.error('[Bot] RCON initial connect failed (will retry):', err.message);
         });
-    }, 30000);
+    }, 45000);
 
     // Initial status
     client.user.setPresence({

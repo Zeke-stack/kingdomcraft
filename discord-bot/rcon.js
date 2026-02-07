@@ -51,7 +51,7 @@ class RconManager {
             console.error(`[RCON] ❌ Failed to connect to ${this.host}:${this.port}`);
             console.error(`[RCON] Error name: ${err.name}, code: ${err.code}, message: ${err.message}`);
             console.error('[RCON] Full error:', err);
-            this.scheduleRetry(20000);
+            this.scheduleRetry(10000);
         }
     }
 

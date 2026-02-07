@@ -139,7 +139,7 @@ async function deployCommands() {
 }
 
 // ─── Bot Ready ───
-client.once('ready', async () => {
+client.on('ready', async () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
     
     try {

@@ -52,6 +52,11 @@ public class KingdomPlayerCommands implements CommandExecutor {
         player.sendMessage(Component.text("You have left ").color(NamedTextColor.YELLOW)
             .append(Component.text(kingdom.getName()).color(NamedTextColor.GOLD)));
         
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("member_left", kingdom.getName(), player.getName());
+        }
+        
         return true;
     }
     

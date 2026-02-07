@@ -74,6 +74,11 @@ public class TransferKingdomCommand implements CommandExecutor {
             .append(Component.text(" to ").color(NamedTextColor.GREEN))
             .append(Component.text(newLeader.getName()).color(NamedTextColor.YELLOW)));
         
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("leadership_transferred", kingdomName, newLeader.getName());
+        }
+        
         // Notify kingdom members
         kingdom.getMembers().forEach(memberId -> {
             Player member = Bukkit.getPlayer(memberId);

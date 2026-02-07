@@ -48,6 +48,11 @@ public class DeleteKingdomCommand implements CommandExecutor {
         
         plugin.getServer().broadcast(broadcast);
         
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("destroyed", kingdomName, sender.getName());
+        }
+        
         return true;
     }
 }

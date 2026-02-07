@@ -68,6 +68,11 @@ public class CreateKingdomCommand implements CommandExecutor {
         
         plugin.getServer().broadcast(broadcast);
         
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("created", kingdomName, leader.getName());
+        }
+        
         leader.sendMessage(Component.text("You are now the leader of ").color(NamedTextColor.GREEN)
             .append(Component.text(kingdomName).color(NamedTextColor.YELLOW))
             .append(Component.text("!").color(NamedTextColor.GREEN)));

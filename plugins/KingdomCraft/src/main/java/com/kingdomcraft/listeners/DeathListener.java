@@ -58,6 +58,14 @@ public class DeathListener implements Listener {
         // Mark player as dead
         plugin.getKingdomData().setPlayerDead(player.getUniqueId(), true);
         
+        // Send death to Discord
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            String deathMsg = event.deathMessage() != null ? 
+                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.deathMessage()) : 
+                player.getName() + " died";
+            plugin.getDiscordWebhook().sendDeath(player.getName(), deathMsg, isLeader);
+        }
+        
         // Broadcast if they were a king/leader
         if (isLeader) {
             Component broadcast = Component.text("The king has died!")

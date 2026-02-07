@@ -107,6 +107,11 @@ public class KingdomLeaderCommands implements CommandExecutor {
         player.sendMessage(Component.text("Renamed kingdom to: ").color(NamedTextColor.GREEN)
             .append(Component.text(newName).color(NamedTextColor.YELLOW)));
         
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("renamed", oldName + " → " + newName, player.getName());
+        }
+        
         return true;
     }
     
@@ -161,6 +166,11 @@ public class KingdomLeaderCommands implements CommandExecutor {
         target.sendMessage(Component.text("You have been accepted into ").color(NamedTextColor.GREEN)
             .append(Component.text(kingdom.getName()).color(NamedTextColor.YELLOW))
             .append(Component.text("!").color(NamedTextColor.GREEN)));
+        
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("member_joined", kingdom.getName(), target.getName());
+        }
         
         return true;
     }
@@ -281,6 +291,11 @@ public class KingdomLeaderCommands implements CommandExecutor {
         target.sendMessage(Component.text("You have been kicked from ").color(NamedTextColor.RED)
             .append(Component.text(kingdom.getName()).color(NamedTextColor.YELLOW))
             .append(Component.text("!").color(NamedTextColor.RED)));
+        
+        // Discord notification
+        if (plugin.getDiscordWebhook() != null && plugin.getDiscordWebhook().isEnabled()) {
+            plugin.getDiscordWebhook().sendKingdomEvent("member_kicked", kingdom.getName(), target.getName());
+        }
         
         return true;
     }

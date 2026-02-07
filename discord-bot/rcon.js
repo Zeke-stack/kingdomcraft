@@ -3,9 +3,9 @@ const { Rcon } = require('rcon-client');
 class RconManager {
     constructor() {
         this.rcon = null;
-        this.host = process.env.MC_RCON_HOST || 'localhost';
-        this.port = parseInt(process.env.MC_RCON_PORT || '25575');
-        this.password = process.env.MC_RCON_PASSWORD || 'kingdomcraft';
+        this.host = process.env.RCON_HOST || 'localhost';
+        this.port = parseInt(process.env.RCON_PORT || '25575');
+        this.password = process.env.RCON_PASSWORD || 'kc-rcon-2025';
         this.connected = false;
     }
 

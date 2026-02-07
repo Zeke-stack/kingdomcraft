@@ -4,9 +4,11 @@ const RconManager = require('./rcon');
 
 // ─── Config ───
 const TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
-const CHAT_CHANNEL_ID = process.env.DISCORD_CHAT_CHANNEL;
-const LOG_CHANNEL_ID = process.env.DISCORD_LOG_CHANNEL;
+const GUILD_ID = process.env.GUILD_ID;
+const CHAT_CHANNEL_ID = process.env.CHAT_CHANNEL_ID;
+const EVENTS_CHANNEL_ID = process.env.EVENTS_CHANNEL_ID;
+const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
+const STATUS_CHANNEL_ID = process.env.STATUS_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
 
 if (!TOKEN) {
@@ -26,6 +28,67 @@ const client = new Client({
 const rcon = new RconManager();
 let serverOnline = false;
 let playerCount = 0;
+let serverLocked = false;
+let statusMessageId = null; // persistent status embed message
+
+// ─── Logging Helper ───
+async function log(title, description, color = 0x808080) {
+    if (!LOG_CHANNEL_ID) return;
+    try {
+        const channel = await client.channels.fetch(LOG_CHANNEL_ID);
+        if (channel) {
+            const embed = new EmbedBuilder()
+                .setTitle(title)
+                .setDescription(description)
+                .setColor(color)
+                .setTimestamp();
+            await channel.send({ embeds: [embed] });
+        }
+    } catch (err) {
+        console.error('[Log] Failed to send log:', err.message);
+    }
+}
+
+// ─── Status Channel Updater ───
+async function updateStatusEmbed() {
+    if (!STATUS_CHANNEL_ID) return;
+    try {
+        const channel = await client.channels.fetch(STATUS_CHANNEL_ID);
+        if (!channel) return;
+
+        const embed = new EmbedBuilder()
+            .setTitle('⚔️ KingdomCraft Server Status')
+            .setColor(serverOnline ? (serverLocked ? 0xff8800 : 0x00ff00) : 0xff0000)
+            .addFields(
+                { name: '📡 Status', value: serverOnline ? (serverLocked ? '🔒 Locked (OP Only)' : '🟢 Online') : '🔴 Offline', inline: true },
+                { name: '👥 Players', value: `${playerCount}`, inline: true },
+                { name: '🌐 IP', value: '`continents.cc`', inline: true },
+                { name: '📦 Version', value: 'Paper 1.21.1', inline: true },
+                { name: '🔗 RCON', value: rcon.isConnected() ? '✅ Connected' : '❌ Disconnected', inline: true },
+                { name: '🔒 Lock', value: serverLocked ? '🔴 Locked' : '🟢 Open', inline: true },
+            )
+            .setFooter({ text: 'KingdomCraft ⚔️ • Updates every 30s' })
+            .setTimestamp();
+
+        // Edit existing message or send new one
+        if (statusMessageId) {
+            try {
+                const msg = await channel.messages.fetch(statusMessageId);
+                await msg.edit({ embeds: [embed] });
+                return;
+            } catch {
+                // Message deleted, send a new one
+                statusMessageId = null;
+            }
+        }
+
+        // Send new status message
+        const sent = await channel.send({ embeds: [embed] });
+        statusMessageId = sent.id;
+    } catch (err) {
+        console.error('[Status] Failed to update:', err.message);
+    }
+}
 
 // ─── Slash Commands ───
 const commands = [
@@ -54,6 +117,9 @@ const commands = [
     new SlashCommandBuilder()
         .setName('serverip')
         .setDescription('Get the server IP address'),
+    new SlashCommandBuilder()
+        .setName('lock')
+        .setDescription('Lock/unlock server - kicks non-OP players and only OPs can join'),
 ].map(cmd => cmd.toJSON());
 
 // ─── Deploy Commands ───
@@ -77,6 +143,15 @@ client.once('ready', async () => {
     await deployCommands();
     await rcon.connect();
 
+    // Initial status
+    client.user.setPresence({
+        activities: [{ name: 'Starting up...', type: ActivityType.Watching }],
+        status: 'idle'
+    });
+    await updateStatusEmbed();
+
+    await log('🤖 Bot Started', 'Discord bot is now online and connected.', 0x00ff00);
+
     // Update status every 30 seconds
     setInterval(async () => {
         try {
@@ -96,18 +171,18 @@ client.once('ready', async () => {
 
         client.user.setPresence({
             activities: [{
-                name: serverOnline ? `${playerCount} player${playerCount !== 1 ? 's' : ''} online | continents.cc` : 'Server Offline',
+                name: serverOnline
+                    ? (serverLocked
+                        ? `🔒 LOCKED | ${playerCount} online`
+                        : `${playerCount} player${playerCount !== 1 ? 's' : ''} online | continents.cc`)
+                    : 'Server Offline',
                 type: ActivityType.Watching
             }],
-            status: serverOnline ? 'online' : 'dnd'
+            status: serverOnline ? (serverLocked ? 'dnd' : 'online') : 'dnd'
         });
-    }, 30000);
 
-    // Initial status
-    client.user.setPresence({
-        activities: [{ name: 'Starting up...', type: ActivityType.Watching }],
-        status: 'idle'
-    });
+        await updateStatusEmbed();
+    }, 30000);
 });
 
 // ─── Chat Sync: Discord → Minecraft ───
@@ -120,13 +195,13 @@ client.on('messageCreate', async (message) => {
 
     try {
         if (rcon.isConnected()) {
-            // Sanitize message
             const clean = message.content
                 .replace(/\\/g, '')
                 .replace(/"/g, "'")
                 .replace(/\n/g, ' ')
                 .substring(0, 200);
             await rcon.sendChat(message.member?.displayName || message.author.username, clean);
+            await log('💬 Discord → MC', `**${message.author.tag}**: ${clean}`, 0x5865F2);
         }
     } catch (err) {
         console.error('[Chat] Failed to send to MC:', err.message);
@@ -138,18 +213,23 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     const { commandName } = interaction;
+    const user = interaction.user.tag;
+
+    // Log every command usage
+    await log('🔧 Command Used', `**${user}** used \`/${commandName}\` ${interaction.options.data.map(o => `${o.name}: \`${o.value}\``).join(' ')}`, 0x5865F2);
 
     switch (commandName) {
         case 'status': {
             const embed = new EmbedBuilder()
                 .setTitle('⚔️ KingdomCraft Server Status')
-                .setColor(serverOnline ? 0x00ff00 : 0xff0000)
+                .setColor(serverOnline ? (serverLocked ? 0xff8800 : 0x00ff00) : 0xff0000)
                 .addFields(
-                    { name: 'Status', value: serverOnline ? '🟢 Online' : '🔴 Offline', inline: true },
+                    { name: 'Status', value: serverOnline ? (serverLocked ? '🔒 Locked' : '🟢 Online') : '🔴 Offline', inline: true },
                     { name: 'Players', value: `${playerCount}`, inline: true },
                     { name: 'IP', value: '`continents.cc`', inline: true },
                     { name: 'Version', value: 'Paper 1.21.1', inline: true },
                     { name: 'RCON', value: rcon.isConnected() ? '✅ Connected' : '❌ Disconnected', inline: true },
+                    { name: 'Lock', value: serverLocked ? '🔴 Locked' : '🟢 Open', inline: true },
                 )
                 .setTimestamp()
                 .setFooter({ text: 'KingdomCraft' });
@@ -193,7 +273,6 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         case 'cmd': {
-            // Staff only
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 await interaction.reply({ content: '❌ You need Administrator permissions to use this.', ephemeral: true });
                 return;
@@ -214,6 +293,7 @@ client.on('interactionCreate', async (interaction) => {
                     )
                     .setTimestamp();
                 await interaction.reply({ embeds: [embed] });
+                await log('⚡ RCON Command', `**${user}** ran: \`${cmd}\`\nResponse: ${response || 'No output'}`, 0xffaa00);
             } catch {
                 await interaction.reply({ content: '❌ Failed to run command', ephemeral: true });
             }
@@ -253,6 +333,7 @@ client.on('interactionCreate', async (interaction) => {
             try {
                 const response = await rcon.sendCommand(`whitelist ${action} ${player}`);
                 await interaction.reply({ content: `✅ Whitelist ${action}: **${player}**\n${response}` });
+                await log('📋 Whitelist', `**${user}** ${action === 'add' ? 'added' : 'removed'} **${player}** from whitelist`, 0x00aaff);
             } catch {
                 await interaction.reply({ content: '❌ Failed to update whitelist', ephemeral: true });
             }
@@ -274,6 +355,96 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.reply({ embeds: [embed] });
             break;
         }
+
+        case 'lock': {
+            // Admin only
+            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                await interaction.reply({ content: '❌ You need Administrator permissions to use this.', ephemeral: true });
+                return;
+            }
+            if (!rcon.isConnected()) {
+                await interaction.reply({ content: '❌ Server is offline', ephemeral: true });
+                return;
+            }
+
+            await interaction.deferReply();
+
+            try {
+                if (!serverLocked) {
+                    // ── LOCK THE SERVER ──
+                    serverLocked = true;
+
+                    // Enable whitelist (OPs bypass whitelist by default)
+                    await rcon.sendCommand('whitelist on');
+
+                    // Get online players and kick non-OPs
+                    const listResponse = await rcon.getPlayerList();
+                    let kickedPlayers = [];
+
+                    // Parse player names from "There are X of a max of Y players online: Name1, Name2"
+                    const nameMatch = listResponse.match(/:\s*(.+)/);
+                    if (nameMatch && nameMatch[1].trim().length > 0) {
+                        const playerNames = nameMatch[1].split(',').map(n => n.trim()).filter(n => n.length > 0);
+
+                        for (const name of playerNames) {
+                            // Check if player is OP
+                            const opCheck = await rcon.sendCommand(`minecraft:op ${name}`);
+                            // If player is already OP, the response contains "Nothing changed" or similar
+                            // If they weren't OP, we need to de-op them back
+                            const wasAlreadyOp = opCheck.includes('Nothing changed') || opCheck.includes('already');
+
+                            if (!wasAlreadyOp) {
+                                // They weren't OP - de-op them and kick
+                                await rcon.sendCommand(`deop ${name}`);
+                                await rcon.sendCommand(`kick ${name} §c§lServer Locked §r§7- Only OP players may be online.`);
+                                kickedPlayers.push(name);
+                            }
+                        }
+                    }
+
+                    // Broadcast to server
+                    await rcon.sendCommand('say §c§l🔒 SERVER LOCKED §r§7- Only OP players may remain online.');
+
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔒 Server Locked')
+                        .setColor(0xff0000)
+                        .setDescription('Server is now **locked**. Only OP players can join or stay.')
+                        .addFields(
+                            { name: 'Kicked Players', value: kickedPlayers.length > 0 ? kickedPlayers.join(', ') : 'None (no non-OP players online)' },
+                            { name: 'Locked By', value: user }
+                        )
+                        .setTimestamp();
+                    await interaction.editReply({ embeds: [embed] });
+
+                    await log('🔒 Server Locked', `**${user}** locked the server.\nKicked: ${kickedPlayers.length > 0 ? kickedPlayers.join(', ') : 'None'}`, 0xff0000);
+
+                } else {
+                    // ── UNLOCK THE SERVER ──
+                    serverLocked = false;
+
+                    // Disable whitelist
+                    await rcon.sendCommand('whitelist off');
+                    await rcon.sendCommand('say §a§l🔓 SERVER UNLOCKED §r§7- All players may now join!');
+
+                    const embed = new EmbedBuilder()
+                        .setTitle('🔓 Server Unlocked')
+                        .setColor(0x00ff00)
+                        .setDescription('Server is now **unlocked**. All players can join again.')
+                        .addFields({ name: 'Unlocked By', value: user })
+                        .setTimestamp();
+                    await interaction.editReply({ embeds: [embed] });
+
+                    await log('🔓 Server Unlocked', `**${user}** unlocked the server.`, 0x00ff00);
+                }
+
+                // Update status immediately
+                await updateStatusEmbed();
+            } catch (err) {
+                await interaction.editReply({ content: `❌ Lock failed: ${err.message}` });
+                await log('❌ Lock Error', `Failed to toggle lock: ${err.message}`, 0xff0000);
+            }
+            break;
+        }
     }
 });
 
@@ -283,18 +454,18 @@ app.use(express.json());
 
 // Health check
 app.get('/', (req, res) => {
-    res.json({ status: 'ok', serverOnline, playerCount });
+    res.json({ status: 'ok', serverOnline, playerCount, serverLocked });
 });
 
 // Receive chat messages from Minecraft
 app.post('/mc/chat', async (req, res) => {
     const { player, message } = req.body;
-    if (!CHAT_CHANNEL_ID) return res.sendStatus(200);
     try {
-        const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
-        if (channel) {
-            await channel.send(`**${player}**: ${message}`);
+        if (CHAT_CHANNEL_ID) {
+            const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
+            if (channel) await channel.send(`**${player}**: ${message}`);
         }
+        await log('💬 MC Chat', `**${player}**: ${message}`, 0x55ff55);
     } catch (err) {
         console.error('[Webhook] Chat error:', err.message);
     }
@@ -304,13 +475,16 @@ app.post('/mc/chat', async (req, res) => {
 // Receive join/leave events
 app.post('/mc/join', async (req, res) => {
     const { player, action } = req.body;
-    if (!CHAT_CHANNEL_ID) return res.sendStatus(200);
     try {
-        const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
-        if (channel) {
-            const emoji = action === 'join' ? '🟢' : '🔴';
-            await channel.send(`${emoji} **${player}** ${action === 'join' ? 'joined' : 'left'} the server`);
+        if (CHAT_CHANNEL_ID) {
+            const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
+            if (channel) {
+                const emoji = action === 'join' ? '🟢' : '🔴';
+                await channel.send(`${emoji} **${player}** ${action === 'join' ? 'joined' : 'left'} the server`);
+            }
         }
+        const color = action === 'join' ? 0x00ff00 : 0xff4444;
+        await log(action === 'join' ? '📥 Player Join' : '📤 Player Leave', `**${player}** ${action === 'join' ? 'joined' : 'left'} the server`, color);
     } catch (err) {
         console.error('[Webhook] Join error:', err.message);
     }
@@ -321,7 +495,6 @@ app.post('/mc/join', async (req, res) => {
 app.post('/mc/death', async (req, res) => {
     const { player, message, isKing } = req.body;
     try {
-        // Send to chat channel
         if (CHAT_CHANNEL_ID) {
             const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
             if (channel) {
@@ -337,13 +510,18 @@ app.post('/mc/death', async (req, res) => {
                 }
             }
         }
-        // Send to log channel
-        if (LOG_CHANNEL_ID) {
-            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-            if (logChannel) {
-                await logChannel.send(`[Death] ${player}: ${message || 'Unknown cause'}`);
+        if (EVENTS_CHANNEL_ID) {
+            const evChannel = await client.channels.fetch(EVENTS_CHANNEL_ID);
+            if (evChannel) {
+                const embed = new EmbedBuilder()
+                    .setTitle(isKing ? '👑💀 KING DEATH' : '☠️ Player Death')
+                    .setColor(isKing ? 0xff0000 : 0x888888)
+                    .setDescription(`**${player}**\n${message || 'Unknown cause'}`)
+                    .setTimestamp();
+                await evChannel.send({ embeds: [embed] });
             }
         }
+        await log('☠️ Death', `**${player}**: ${message || 'Unknown cause'}${isKing ? ' **[KING]**' : ''}`, 0xff0000);
     } catch (err) {
         console.error('[Webhook] Death error:', err.message);
     }
@@ -353,42 +531,56 @@ app.post('/mc/death', async (req, res) => {
 // Receive kingdom events
 app.post('/mc/kingdom', async (req, res) => {
     const { action, kingdom, player, message } = req.body;
-    if (!CHAT_CHANNEL_ID) return res.sendStatus(200);
     try {
-        const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
-        if (channel) {
-            const embed = new EmbedBuilder()
-                .setColor(0xffcc00)
-                .setTimestamp();
+        const embed = new EmbedBuilder()
+            .setColor(0xffcc00)
+            .setTimestamp();
 
-            switch (action) {
-                case 'created':
-                    embed.setTitle('🏰 New Kingdom Established!')
-                        .setDescription(`**${kingdom}** has been founded by **${player}**!\n🛡️ 3 days of protection active.`);
-                    break;
-                case 'deleted':
-                    embed.setTitle('💀 Kingdom Has Fallen')
-                        .setColor(0xff0000)
-                        .setDescription(`The kingdom of **${kingdom}** has been destroyed.`);
-                    break;
-                case 'transfer':
-                    embed.setTitle('👑 Leadership Transfer')
-                        .setDescription(`**${player}** is now the leader of **${kingdom}**.`);
-                    break;
-                case 'join':
-                    embed.setTitle('📥 New Kingdom Member')
-                        .setDescription(`**${player}** joined **${kingdom}**.`);
-                    break;
-                case 'leave':
-                    embed.setTitle('📤 Kingdom Member Left')
-                        .setDescription(`**${player}** left **${kingdom}**.`);
-                    break;
-                default:
-                    embed.setTitle('🏰 Kingdom Event')
-                        .setDescription(message || `${action} - ${kingdom} - ${player}`);
-            }
-            await channel.send({ embeds: [embed] });
+        switch (action) {
+            case 'created':
+                embed.setTitle('🏰 New Kingdom Established!')
+                    .setDescription(`**${kingdom}** has been founded by **${player}**!\n🛡️ 3 days of protection active.`);
+                break;
+            case 'destroyed':
+                embed.setTitle('💀 Kingdom Has Fallen')
+                    .setColor(0xff0000)
+                    .setDescription(`The kingdom of **${kingdom}** has been destroyed.`);
+                break;
+            case 'leadership_transferred':
+                embed.setTitle('👑 Leadership Transfer')
+                    .setDescription(`**${player}** is now the leader of **${kingdom}**.`);
+                break;
+            case 'member_joined':
+                embed.setTitle('📥 New Kingdom Member')
+                    .setDescription(`**${player}** joined **${kingdom}**.`);
+                break;
+            case 'member_left':
+                embed.setTitle('📤 Kingdom Member Left')
+                    .setDescription(`**${player}** left **${kingdom}**.`);
+                break;
+            case 'member_kicked':
+                embed.setTitle('🦶 Member Kicked')
+                    .setColor(0xff4444)
+                    .setDescription(`**${player}** was kicked from **${kingdom}**.`);
+                break;
+            case 'renamed':
+                embed.setTitle('✏️ Kingdom Renamed')
+                    .setDescription(`**${kingdom}**`);
+                break;
+            default:
+                embed.setTitle('🏰 Kingdom Event')
+                    .setDescription(message || `${action} - ${kingdom} - ${player}`);
         }
+
+        if (CHAT_CHANNEL_ID) {
+            const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
+            if (channel) await channel.send({ embeds: [embed] });
+        }
+        if (EVENTS_CHANNEL_ID) {
+            const evChannel = await client.channels.fetch(EVENTS_CHANNEL_ID);
+            if (evChannel) await evChannel.send({ embeds: [embed] });
+        }
+        await log('🏰 Kingdom', `**${action}** | Kingdom: **${kingdom}** | Player: **${player || 'N/A'}**`, 0xffcc00);
     } catch (err) {
         console.error('[Webhook] Kingdom error:', err.message);
     }
@@ -398,26 +590,31 @@ app.post('/mc/kingdom', async (req, res) => {
 // Receive server start/stop
 app.post('/mc/server', async (req, res) => {
     const { action } = req.body;
-    if (!CHAT_CHANNEL_ID) return res.sendStatus(200);
     try {
-        const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
-        if (channel) {
-            if (action === 'start') {
-                const embed = new EmbedBuilder()
-                    .setTitle('🟢 Server Online')
-                    .setColor(0x00ff00)
-                    .setDescription('KingdomCraft server is now online!\nConnect: `continents.cc`')
-                    .setTimestamp();
-                await channel.send({ embeds: [embed] });
-            } else if (action === 'stop') {
-                const embed = new EmbedBuilder()
-                    .setTitle('🔴 Server Offline')
-                    .setColor(0xff0000)
-                    .setDescription('KingdomCraft server has gone offline.')
-                    .setTimestamp();
-                await channel.send({ embeds: [embed] });
-            }
+        const embed = new EmbedBuilder()
+            .setTimestamp();
+
+        if (action === 'start') {
+            serverOnline = true;
+            embed.setTitle('🟢 Server Online')
+                .setColor(0x00ff00)
+                .setDescription('KingdomCraft server is now online!\nConnect: `continents.cc`');
+        } else if (action === 'stop') {
+            serverOnline = false;
+            playerCount = 0;
+            serverLocked = false;
+            embed.setTitle('🔴 Server Offline')
+                .setColor(0xff0000)
+                .setDescription('KingdomCraft server has gone offline.');
         }
+
+        if (CHAT_CHANNEL_ID) {
+            const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
+            if (channel) await channel.send({ embeds: [embed] });
+        }
+
+        await log(action === 'start' ? '🟢 Server Start' : '🔴 Server Stop', `Server ${action === 'start' ? 'started' : 'stopped'}`, action === 'start' ? 0x00ff00 : 0xff0000);
+        await updateStatusEmbed();
     } catch (err) {
         console.error('[Webhook] Server error:', err.message);
     }

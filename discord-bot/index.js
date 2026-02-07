@@ -141,8 +141,17 @@ async function deployCommands() {
 // ─── Bot Ready ───
 client.once('ready', async () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
-    await deployCommands();
-    await rcon.connect();
+    
+    try {
+        await deployCommands();
+    } catch (err) {
+        console.error('[Bot] Command deploy error:', err.message);
+    }
+    
+    // Connect RCON in background (don't block or crash)
+    rcon.connect().catch(err => {
+        console.error('[Bot] RCON initial connect failed (will retry):', err.message);
+    });
 
     // Initial status
     client.user.setPresence({
@@ -628,8 +637,24 @@ app.post('/mc/server', async (req, res) => {
 });
 
 // ─── Start ───
+// Start Express FIRST so Railway sees a healthy service
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`[API] Listening on port ${PORT}`);
 });
 
-client.login(TOKEN);
+// Then connect Discord
+console.log('[Bot] Logging in...');
+console.log('[Bot] Token present:', !!TOKEN);
+console.log('[Bot] Guild ID:', GUILD_ID || 'NOT SET');
+
+client.login(TOKEN).catch(err => {
+    console.error('[Bot] FATAL: Failed to login:', err.message);
+});
+
+// Global error handlers so the process doesn't crash
+process.on('unhandledRejection', (err) => {
+    console.error('[Bot] Unhandled rejection:', err);
+});
+process.on('uncaughtException', (err) => {
+    console.error('[Bot] Uncaught exception:', err);
+});

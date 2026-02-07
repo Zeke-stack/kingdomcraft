@@ -7,34 +7,55 @@ class RconManager {
         this.port = parseInt(process.env.RCON_PORT || '25575');
         this.password = process.env.RCON_PASSWORD || 'kc-rcon-2025';
         this.connected = false;
+        this.retryTimer = null;
     }
 
     async connect() {
+        // Clean up old connection
+        if (this.rcon) {
+            try { this.rcon.end(); } catch {}
+            this.rcon = null;
+        }
+        this.connected = false;
+
+        console.log(`[RCON] Connecting to ${this.host}:${this.port}...`);
+
+        if (!this.host || this.host === 'localhost') {
+            console.log('[RCON] No RCON_HOST set, skipping connection. Set RCON_HOST env var.');
+            return;
+        }
+
         try {
             this.rcon = await Rcon.connect({
                 host: this.host,
                 port: this.port,
                 password: this.password,
-                timeout: 5000
+                timeout: 10000
             });
             this.connected = true;
-            console.log('[RCON] Connected to Minecraft server');
+            console.log(`[RCON] ✅ Connected to ${this.host}:${this.port}`);
 
             this.rcon.on('end', () => {
                 this.connected = false;
-                console.log('[RCON] Disconnected, will retry...');
-                setTimeout(() => this.connect(), 10000);
+                console.log('[RCON] Disconnected, retrying in 15s...');
+                this.scheduleRetry(15000);
             });
 
             this.rcon.on('error', (err) => {
-                console.error('[RCON] Error:', err.message);
+                console.error('[RCON] Socket error:', err.message);
                 this.connected = false;
+                // Don't rethrow — handled
             });
         } catch (err) {
             this.connected = false;
-            console.error('[RCON] Failed to connect:', err.message);
-            setTimeout(() => this.connect(), 15000);
+            console.error(`[RCON] ❌ Failed to connect to ${this.host}:${this.port} — ${err.message}`);
+            this.scheduleRetry(20000);
         }
+    }
+
+    scheduleRetry(ms) {
+        if (this.retryTimer) clearTimeout(this.retryTimer);
+        this.retryTimer = setTimeout(() => this.connect().catch(() => {}), ms);
     }
 
     async send(command) {
@@ -46,6 +67,7 @@ class RconManager {
             return response;
         } catch (err) {
             this.connected = false;
+            this.scheduleRetry(10000);
             throw err;
         }
     }

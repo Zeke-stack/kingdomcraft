@@ -71,6 +71,26 @@ commands:
   joinkingdom:
     description: Request to join a kingdom
     usage: /joinkingdom <kingdom>
+  createnpc:
+    description: Create a travel NPC at your location
+    usage: /createnpc <id> <display name>
+    permission: kingdomcraft.staff.npc
+  deletenpc:
+    description: Delete a travel NPC
+    usage: /deletenpc <id>
+    permission: kingdomcraft.staff.npc
+  listnpcs:
+    description: List all travel NPCs
+    usage: /listnpcs
+    permission: kingdomcraft.staff.npc
+  movenpc:
+    description: Move a travel NPC to your location
+    usage: /movenpc <id>
+    permission: kingdomcraft.staff.npc
+  setnpcdest:
+    description: Set travel NPC destination to your location
+    usage: /setnpcdest <id>
+    permission: kingdomcraft.staff.npc
 
 permissions:
   kingdomcraft.staff.revive:
@@ -94,3 +114,6 @@ permissions:
   kingdomcraft.protected:
     description: Marks a kingdom as protected (3-day immunity)
     default: false
+  kingdomcraft.staff.npc:
+    description: Allows creating and managing travel NPCs
+    default: op

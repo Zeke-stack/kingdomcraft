@@ -6,11 +6,14 @@ import com.kingdomcraft.discord.DiscordWebhook;
 import com.kingdomcraft.listeners.ChatSyncListener;
 import com.kingdomcraft.listeners.DeathListener;
 import com.kingdomcraft.listeners.JoinLeaveListener;
+import com.kingdomcraft.npc.NPCListener;
+import com.kingdomcraft.npc.NPCManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class KingdomCraft extends JavaPlugin {
     private KingdomData kingdomData;
     private DiscordWebhook discordWebhook;
+    private NPCManager npcManager;
     
     @Override
     public void onEnable() {
@@ -23,16 +26,26 @@ public class KingdomCraft extends JavaPlugin {
         // Initialize Discord webhook
         discordWebhook = new DiscordWebhook(this);
         
+        // Initialize NPC manager
+        npcManager = new NPCManager(this);
+        
         // Register listeners
         getServer().getPluginManager().registerEvents(new DeathListener(this), this);
         getServer().getPluginManager().registerEvents(new ChatSyncListener(this), this);
         getServer().getPluginManager().registerEvents(new JoinLeaveListener(this), this);
+        getServer().getPluginManager().registerEvents(new NPCListener(this, npcManager), this);
         
         // Register commands
         registerCommands();
         
         getLogger().info("KingdomCraft has been enabled!");
         getLogger().info("Death system and kingdom management active.");
+        
+        // Respawn NPCs that may have despawned
+        getServer().getScheduler().runTaskLater(this, () -> {
+            npcManager.respawnAll();
+            getLogger().info("Travel NPCs checked/respawned.");
+        }, 40L); // 2 seconds after enable
         
         // Notify Discord that server is online
         if (discordWebhook.isEnabled()) {
@@ -85,6 +98,14 @@ public class KingdomCraft extends JavaPlugin {
         KingdomPlayerCommands playerCommands = new KingdomPlayerCommands(this);
         getCommand("leavekingdom").setExecutor(playerCommands);
         getCommand("joinkingdom").setExecutor(playerCommands);
+        
+        // NPC commands
+        NPCCommands npcCommands = new NPCCommands(this, npcManager);
+        getCommand("createnpc").setExecutor(npcCommands);
+        getCommand("deletenpc").setExecutor(npcCommands);
+        getCommand("listnpcs").setExecutor(npcCommands);
+        getCommand("movenpc").setExecutor(npcCommands);
+        getCommand("setnpcdest").setExecutor(npcCommands);
     }
     
     public KingdomData getKingdomData() {
@@ -93,5 +114,9 @@ public class KingdomCraft extends JavaPlugin {
     
     public DiscordWebhook getDiscordWebhook() {
         return discordWebhook;
+    }
+    
+    public NPCManager getNpcManager() {
+        return npcManager;
     }
 }

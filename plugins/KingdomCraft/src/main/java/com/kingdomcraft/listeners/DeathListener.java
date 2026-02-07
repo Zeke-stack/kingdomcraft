@@ -55,12 +55,6 @@ public class DeathListener implements Listener {
             return;
         }
 
-        // Keep inventory and levels on death
-        event.setKeepInventory(true);
-        event.setKeepLevel(true);
-        event.getDrops().clear();
-        event.setDroppedExp(0);
-        
         // Mark player as dead
         plugin.getKingdomData().setPlayerDead(player.getUniqueId(), true);
         

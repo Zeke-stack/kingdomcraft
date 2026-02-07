@@ -15,11 +15,35 @@ echo "eula=true" > eula.txt
 
 # Ensure world data is properly loaded
 if [ -d "/data/world" ]; then
-    echo "Found existing world data in persistent storage, copying to server..."
-    cp -r /data/world ./world 2>/dev/null || echo "World already present"
-    cp -r /data/world_nether ./world_nether 2>/dev/null || echo "Nether already present"
-    cp -r /data/world_the_end ./world_the_end 2>/dev/null || echo "End already present"
-    cp -r /data/plugins ./plugins 2>/dev/null || echo "Plugins already present"
+    echo "Found existing world data in persistent storage, syncing..."
+    # Merge persistent data INTO server dir (persistent data wins for world chunks)
+    cp -rn /data/world/* ./world/ 2>/dev/null || true
+    cp -rn /data/world_nether/* ./world_nether/ 2>/dev/null || true
+    cp -rn /data/world_the_end/* ./world_the_end/ 2>/dev/null || true
+    
+    # For playerdata, persistent storage always wins (latest inventories)
+    if [ -d "/data/world/playerdata" ]; then
+        echo "Restoring player data from persistent storage..."
+        cp -rf /data/world/playerdata/* ./world/playerdata/ 2>/dev/null || true
+    fi
+    
+    # Restore plugin data from persistent storage
+    if [ -d "/data/plugins" ]; then
+        echo "Restoring plugin data from persistent storage..."
+        for dir in /data/plugins/*/; do
+            dirname=$(basename "$dir")
+            # Only copy plugin config/data, not plugin jars (those come from Docker build)
+            if [ -d "$dir" ] && [ "$dirname" != "AdvancedInvViewer" ] && [ "$dirname" != "StaffCommands" ] && [ "$dirname" != "KingdomCraft" ]; then
+                cp -rf "$dir" ./plugins/ 2>/dev/null || true
+            else
+                # For custom plugins, only copy data files not the source
+                mkdir -p "./plugins/$dirname"
+                find "$dir" -maxdepth 1 -type f \( -name "*.yml" -o -name "*.json" -o -name "*.txt" -o -name "*.db" \) -exec cp -f {} "./plugins/$dirname/" \; 2>/dev/null || true
+            fi
+        done
+    fi
+else
+    echo "No existing world data found, using fresh server files."
 fi
 
 # Disable broken datapack (no_underground_lava) to prevent registry errors

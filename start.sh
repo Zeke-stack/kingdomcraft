@@ -76,6 +76,29 @@ cd /server
 # Set the Discord bot URL for the MC plugin (localhost since same container)
 export DISCORD_BOT_URL=http://localhost:3000
 
+# Ensure Lottcha always has OP (re-add on every startup)
+echo "Ensuring Lottcha has OP..."
+# ops.json is loaded by the server on start, make sure Lottcha is in it
+python3 -c "
+import json, sys
+try:
+    with open('ops.json') as f: ops = json.load(f)
+except: ops = []
+uuids = [o['uuid'] for o in ops]
+if '5bbf23d0-e968-4e47-854a-02090deeba3a' not in uuids:
+    ops.append({'uuid':'5bbf23d0-e968-4e47-854a-02090deeba3a','name':'Lottcha','level':4,'bypassesPlayerLimit':True})
+    with open('ops.json','w') as f: json.dump(ops,f,indent=2)
+    print('Lottcha added to ops.json')
+else:
+    # Ensure bypass is set
+    for o in ops:
+        if o['uuid'] == '5bbf23d0-e968-4e47-854a-02090deeba3a':
+            o['bypassesPlayerLimit'] = True
+            o['level'] = 4
+    with open('ops.json','w') as f: json.dump(ops,f,indent=2)
+    print('Lottcha already in ops.json (verified)')
+" 2>/dev/null || echo "Python not available, ops.json unchanged"
+
 # Start the server
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \

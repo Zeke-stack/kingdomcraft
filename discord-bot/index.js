@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, PermissionFlagsBits, SlashCommandBuilder, REST, Routes, ActivityType } = require('discord.js');
 const express = require('express');
+const crypto = require('crypto');
+const path = require('path');
 const RconManager = require('./rcon');
 
 // ─── Config ───
@@ -11,6 +13,8 @@ const EVENTS_CHANNEL_ID = process.env.EVENTS_CHANNEL_ID;
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 const STATUS_CHANNEL_ID = process.env.STATUS_CHANNEL_ID;
 const PORT = process.env.PORT || 3000;
+const PANEL_PASSWORD = process.env.PANEL_PASSWORD || 'kc-panel-2025';
+const panelTokens = new Set(); // valid session tokens
 
 if (!TOKEN) {
     console.error('ERROR: DISCORD_TOKEN environment variable is required');
@@ -656,6 +660,154 @@ app.post('/mc/server', async (req, res) => {
         console.error('[Webhook] Server error:', err.message);
     }
     res.sendStatus(200);
+});
+
+// ─── Control Panel ───
+app.use('/panel-assets', express.static(path.join(__dirname, 'public')));
+
+// Serve panel HTML
+app.get('/panel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'panel.html'));
+});
+
+// Panel auth middleware
+function panelAuth(req, res, next) {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+    const t = auth.slice(7);
+    if (!panelTokens.has(t)) return res.status(401).json({ error: 'Invalid token' });
+    next();
+}
+
+// Login
+app.post('/panel/login', (req, res) => {
+    const { password } = req.body;
+    if (password === PANEL_PASSWORD) {
+        const t = crypto.randomBytes(32).toString('hex');
+        panelTokens.add(t);
+        // Clean old tokens if too many
+        if (panelTokens.size > 50) {
+            const arr = [...panelTokens];
+            arr.slice(0, arr.length - 20).forEach(tok => panelTokens.delete(tok));
+        }
+        return res.json({ success: true, token: t });
+    }
+    res.json({ success: false });
+});
+
+// Status
+app.get('/panel/status', panelAuth, (req, res) => {
+    res.json({
+        serverOnline,
+        playerCount,
+        serverLocked,
+        rconConnected: rcon.isConnected()
+    });
+});
+
+// Player list
+app.get('/panel/players', panelAuth, async (req, res) => {
+    if (!rcon.isConnected()) return res.json({ players: [] });
+    try {
+        const list = await rcon.getPlayerList();
+        const nameMatch = list.match(/:\s*(.+)/);
+        let players = [];
+        if (nameMatch && nameMatch[1].trim().length > 0) {
+            players = nameMatch[1].split(',').map(n => n.trim()).filter(n => n.length > 0);
+        }
+        res.json({ players });
+    } catch {
+        res.json({ players: [] });
+    }
+});
+
+// Run command
+app.post('/panel/command', panelAuth, async (req, res) => {
+    const { command } = req.body;
+    if (!command) return res.json({ response: 'No command provided' });
+    if (!rcon.isConnected()) return res.json({ response: 'RCON not connected' });
+    try {
+        const response = await rcon.sendCommand(command);
+        await log('Panel Command', `\`${command}\`\nResponse: ${response || 'No output'}`, 0xffaa00);
+        res.json({ response: response || 'No output' });
+    } catch (err) {
+        res.json({ response: 'Error: ' + err.message });
+    }
+});
+
+// Quick actions
+app.post('/panel/action', panelAuth, async (req, res) => {
+    const { action } = req.body;
+    if (!rcon.isConnected() && action !== 'toggle-lock') {
+        return res.json({ message: 'RCON not connected' });
+    }
+    try {
+        switch (action) {
+            case 'save':
+                await rcon.sendCommand('save-all');
+                res.json({ message: 'World saved' });
+                break;
+            case 'weather-clear':
+                await rcon.sendCommand('weather clear');
+                res.json({ message: 'Weather cleared' });
+                break;
+            case 'time-day':
+                await rcon.sendCommand('time set day');
+                res.json({ message: 'Time set to day' });
+                break;
+            case 'time-night':
+                await rcon.sendCommand('time set night');
+                res.json({ message: 'Time set to night' });
+                break;
+            case 'whitelist-on':
+                await rcon.sendCommand('whitelist on');
+                res.json({ message: 'Whitelist enabled' });
+                break;
+            case 'whitelist-off':
+                await rcon.sendCommand('whitelist off');
+                res.json({ message: 'Whitelist disabled' });
+                break;
+            case 'toggle-lock':
+                if (!rcon.isConnected()) return res.json({ message: 'RCON not connected' });
+                if (!serverLocked) {
+                    serverLocked = true;
+                    await rcon.sendCommand('whitelist on');
+                    // Kick non-OPs
+                    const list = await rcon.getPlayerList();
+                    const nameMatch = list.match(/:\s*(.+)/);
+                    if (nameMatch && nameMatch[1].trim().length > 0) {
+                        const names = nameMatch[1].split(',').map(n => n.trim()).filter(n => n.length > 0);
+                        for (const name of names) {
+                            const opCheck = await rcon.sendCommand(`minecraft:op ${name}`);
+                            const wasOp = opCheck.includes('Nothing changed') || opCheck.includes('already');
+                            if (!wasOp) {
+                                await rcon.sendCommand(`deop ${name}`);
+                                await rcon.sendCommand(`kick ${name} Server locked`);
+                            }
+                        }
+                    }
+                    await rcon.sendCommand('say Server has been LOCKED. Only OP players may be online.');
+                    await updateStatusEmbed();
+                    res.json({ message: 'Server locked' });
+                } else {
+                    serverLocked = false;
+                    await rcon.sendCommand('whitelist off');
+                    await rcon.sendCommand('say Server has been UNLOCKED. All players may join.');
+                    await updateStatusEmbed();
+                    res.json({ message: 'Server unlocked' });
+                }
+                break;
+            case 'stop':
+                await rcon.sendCommand('stop');
+                res.json({ message: 'Server stopping...' });
+                break;
+            default:
+                res.json({ message: 'Unknown action' });
+        }
+        await log('Panel Action', `Action: \`${action}\``, 0x4a6cf7);
+    } catch (err) {
+        res.json({ message: 'Error: ' + err.message });
+    }
 });
 
 // ─── Start ───

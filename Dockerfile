@@ -22,6 +22,9 @@ WORKDIR /server
 # Copy server files
 COPY . .
 
+# Save a backup of server.properties that won't be overwritten by volume data
+RUN cp server.properties /tmp/server.properties.bak
+
 # Copy built plugins from builder stage
 COPY --from=builder /build/plugins/AdvancedInvViewer/target/AdvancedInvViewer.jar ./plugins/AdvancedInvViewer.jar
 COPY --from=builder /build/plugins/StaffCommands/target/StaffCommands.jar ./plugins/StaffCommands.jar
@@ -32,6 +35,9 @@ RUN chmod +x start.sh
 
 # Expose Minecraft server port
 EXPOSE 25565
+
+# Expose RCON port
+EXPOSE 25575
 
 # Expose voice chat port if needed
 EXPOSE 24454/udp

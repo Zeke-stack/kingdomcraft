@@ -52,6 +52,10 @@ if [ -d "./world/datapacks/no_underground_lava" ]; then
     rm -rf ./world/datapacks/no_underground_lava
 fi
 
+# Always use the latest server.properties from Docker image (ensures RCON etc. stay enabled)
+echo "Applying latest server.properties..."
+cp -f /tmp/server.properties.bak ./server.properties 2>/dev/null || echo "No server.properties backup found"
+
 # Start the server
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \
     -XX:+UseG1GC \

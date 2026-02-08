@@ -13,8 +13,20 @@ echo "Allocating ${MIN_MEMORY} to ${MEMORY} of RAM"
 # Accept EULA automatically
 echo "eula=true" > eula.txt
 
-# Ensure world data is properly loaded from persistent volume
-if [ -d "/data/world" ] && [ "$(ls -A /data/world 2>/dev/null)" ]; then
+# Ensure world data is properly loaded
+# FORCE_SEED: When set, the Docker image world OVERWRITES the volume
+# Use this when your local world has the correct builds
+FORCE_SEED=${FORCE_SEED:-"true"}
+
+if [ "$FORCE_SEED" = "true" ]; then
+    echo "=== FORCE SEED MODE ==="
+    echo "Pushing Docker image world INTO persistent storage (your local builds win)..."
+    mkdir -p /data
+    cp -rf ./world /data/ && echo "  world -> /data: SEEDED" || echo "  world: FAILED"
+    cp -rf ./world_the_end /data/ 2>/dev/null && echo "  end -> /data: SEEDED" || true
+    echo "Volume now has your local world. Future deploys will restore from it."
+    echo "=== SEED COMPLETE ==="
+elif [ -d "/data/world" ] && [ "$(ls -A /data/world 2>/dev/null)" ]; then
     echo "Found existing world data in persistent storage!"
     echo "Wiping Docker image world and replacing with saved data..."
     
@@ -40,9 +52,7 @@ if [ -d "/data/world" ] && [ "$(ls -A /data/world 2>/dev/null)" ]; then
         for dir in /data/plugins/*/; do
             dirname=$(basename "$dir")
             mkdir -p "./plugins/$dirname"
-            # Copy data files (yml, json, txt, db) but not jars (jars come from Docker build)
             find "$dir" -maxdepth 1 -type f \( -name "*.yml" -o -name "*.json" -o -name "*.txt" -o -name "*.db" -o -name "*.properties" \) -exec cp -f {} "./plugins/$dirname/" \; 2>/dev/null || true
-            # Copy subdirectories (like CoreProtect database folder, etc.)
             find "$dir" -mindepth 1 -maxdepth 1 -type d -exec cp -rf {} "./plugins/$dirname/" \; 2>/dev/null || true
         done
         echo "  plugins: RESTORED"
@@ -51,7 +61,11 @@ if [ -d "/data/world" ] && [ "$(ls -A /data/world 2>/dev/null)" ]; then
     echo "World restore complete!"
 else
     echo "No existing world data in /data — using fresh server files from Docker image."
-    echo "(This is normal on first deploy)"
+    echo "Seeding volume with Docker image world for future restores..."
+    mkdir -p /data
+    cp -rf ./world /data/ && echo "  world: SEEDED" || echo "  world: FAILED"
+    cp -rf ./world_the_end /data/ 2>/dev/null || true
+    echo "(First deploy seeding done)"
 fi
 
 # Disable broken datapack (no_underground_lava) to prevent registry errors

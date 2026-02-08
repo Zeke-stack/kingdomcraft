@@ -16,7 +16,7 @@ echo "eula=true" > eula.txt
 # Ensure world data is properly loaded
 # FORCE_SEED: When set, the Docker image world OVERWRITES the volume
 # Use this when your local world has the correct builds
-FORCE_SEED=${FORCE_SEED:-"true"}
+FORCE_SEED=${FORCE_SEED:-"false"}
 
 if [ "$FORCE_SEED" = "true" ]; then
     echo "=== FORCE SEED MODE ==="

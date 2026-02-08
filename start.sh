@@ -13,50 +13,45 @@ echo "Allocating ${MIN_MEMORY} to ${MEMORY} of RAM"
 # Accept EULA automatically
 echo "eula=true" > eula.txt
 
-# Ensure world data is properly loaded
-if [ -d "/data/world" ]; then
-    echo "Found existing world data in persistent storage, syncing..."
+# Ensure world data is properly loaded from persistent volume
+if [ -d "/data/world" ] && [ "$(ls -A /data/world 2>/dev/null)" ]; then
+    echo "Found existing world data in persistent storage!"
+    echo "Wiping Docker image world and replacing with saved data..."
     
-    # Persistent storage has the REAL latest data — it always wins
-    # Copy everything from persistent storage, overwriting Docker image files
-    cp -rf /data/world/* ./world/ 2>/dev/null || true
-    cp -rf /data/world_nether/* ./world_nether/ 2>/dev/null || true
-    cp -rf /data/world_the_end/* ./world_the_end/ 2>/dev/null || true
+    # COMPLETELY replace image worlds with volume worlds
+    rm -rf ./world
+    cp -rf /data/world ./world
+    echo "  world: RESTORED"
     
-    # Explicitly ensure playerdata, advancements, and stats are restored
-    if [ -d "/data/world/playerdata" ]; then
-        echo "Restoring player data from persistent storage..."
-        mkdir -p ./world/playerdata
-        cp -rf /data/world/playerdata/* ./world/playerdata/ 2>/dev/null || true
+    if [ -d "/data/world_nether" ]; then
+        rm -rf ./world_nether
+        cp -rf /data/world_nether ./world_nether
+        echo "  nether: RESTORED"
     fi
-    if [ -d "/data/world/advancements" ]; then
-        echo "Restoring advancements from persistent storage..."
-        mkdir -p ./world/advancements
-        cp -rf /data/world/advancements/* ./world/advancements/ 2>/dev/null || true
-    fi
-    if [ -d "/data/world/stats" ]; then
-        echo "Restoring stats from persistent storage..."
-        mkdir -p ./world/stats
-        cp -rf /data/world/stats/* ./world/stats/ 2>/dev/null || true
+    if [ -d "/data/world_the_end" ]; then
+        rm -rf ./world_the_end
+        cp -rf /data/world_the_end ./world_the_end
+        echo "  end: RESTORED"
     fi
     
-    # Restore plugin data from persistent storage
+    # Restore plugin data (configs, databases, etc.)
     if [ -d "/data/plugins" ]; then
-        echo "Restoring plugin data from persistent storage..."
+        echo "Restoring plugin data..."
         for dir in /data/plugins/*/; do
             dirname=$(basename "$dir")
-            # Only copy plugin config/data, not plugin jars (those come from Docker build)
-            if [ -d "$dir" ] && [ "$dirname" != "AdvancedInvViewer" ] && [ "$dirname" != "StaffCommands" ] && [ "$dirname" != "KingdomCraft" ]; then
-                cp -rf "$dir" ./plugins/ 2>/dev/null || true
-            else
-                # For custom plugins, only copy data files not the source
-                mkdir -p "./plugins/$dirname"
-                find "$dir" -maxdepth 1 -type f \( -name "*.yml" -o -name "*.json" -o -name "*.txt" -o -name "*.db" \) -exec cp -f {} "./plugins/$dirname/" \; 2>/dev/null || true
-            fi
+            mkdir -p "./plugins/$dirname"
+            # Copy data files (yml, json, txt, db) but not jars (jars come from Docker build)
+            find "$dir" -maxdepth 1 -type f \( -name "*.yml" -o -name "*.json" -o -name "*.txt" -o -name "*.db" -o -name "*.properties" \) -exec cp -f {} "./plugins/$dirname/" \; 2>/dev/null || true
+            # Copy subdirectories (like CoreProtect database folder, etc.)
+            find "$dir" -mindepth 1 -maxdepth 1 -type d -exec cp -rf {} "./plugins/$dirname/" \; 2>/dev/null || true
         done
+        echo "  plugins: RESTORED"
     fi
+    
+    echo "World restore complete!"
 else
-    echo "No existing world data found, using fresh server files."
+    echo "No existing world data in /data — using fresh server files from Docker image."
+    echo "(This is normal on first deploy)"
 fi
 
 # Disable broken datapack (no_underground_lava) to prevent registry errors
@@ -156,12 +151,39 @@ backup_and_exit() {
         kill $DISCORD_BOT_PID 2>/dev/null || true
     fi
 
+    # Stop auto-save loop
+    if [ -n "$AUTO_SAVE_PID" ] && kill -0 $AUTO_SAVE_PID 2>/dev/null; then
+        kill $AUTO_SAVE_PID 2>/dev/null || true
+    fi
+
     echo "=== SHUTDOWN COMPLETE ==="
     exit 0
 }
 
 # Trap SIGTERM and SIGINT so backup always runs
 trap backup_and_exit SIGTERM SIGINT
+
+# ── Periodic auto-save to persistent storage (every 5 minutes) ──
+auto_save_loop() {
+    sleep 120  # Wait 2 min for server to fully start
+    while true; do
+        sleep 300  # Every 5 minutes
+        if [ -n "$MC_PID" ] && kill -0 $MC_PID 2>/dev/null; then
+            echo "[AUTO-SAVE] Syncing world data to persistent storage..."
+            mkdir -p /data
+            cp -rf ./world /data/ 2>/dev/null && echo "[AUTO-SAVE] world: OK" || echo "[AUTO-SAVE] world: FAILED"
+            cp -rf ./world_the_end /data/ 2>/dev/null || true
+            cp -rf ./plugins /data/ 2>/dev/null && echo "[AUTO-SAVE] plugins: OK" || true
+            echo "[AUTO-SAVE] Complete."
+        else
+            echo "[AUTO-SAVE] MC server not running, stopping auto-save loop."
+            break
+        fi
+    done
+}
+auto_save_loop &
+AUTO_SAVE_PID=$!
+echo "Auto-save loop started (PID: $AUTO_SAVE_PID) — syncs to /data every 5 minutes"
 
 # Start the server in the background so we can trap signals
 java -Xms${MIN_MEMORY} -Xmx${MEMORY} \

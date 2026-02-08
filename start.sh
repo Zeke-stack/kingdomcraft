@@ -73,8 +73,11 @@ cp -f /tmp/server.properties.bak ./server.properties 2>/dev/null || echo "No ser
 echo "Ensuring RCON is enabled..."
 sed -i 's/enable-rcon=false/enable-rcon=true/' server.properties
 sed -i 's/rcon.password=$/rcon.password=kc-rcon-2025/' server.properties
+# Disable spawn protection so players can build everywhere
+sed -i 's/spawn-protection=[0-9]*/spawn-protection=0/' server.properties
 grep -q "enable-rcon=true" server.properties && echo "RCON: enabled" || echo "RCON: FAILED to enable!"
 grep -q "rcon.password=kc-rcon-2025" server.properties && echo "RCON password: set" || echo "RCON password: MISSING!"
+grep -q "spawn-protection=0" server.properties && echo "Spawn protection: disabled" || echo "Spawn protection: FAILED to disable!"
 
 # Start Discord bot in background (uses localhost RCON since it's in the same container)
 echo "Starting Discord bot..."

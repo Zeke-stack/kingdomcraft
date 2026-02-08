@@ -8,7 +8,9 @@ import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * Custom recipes - Iron armor uses iron blocks instead of iron ingots.
+ * Custom recipes:
+ * - Iron armor uses iron blocks instead of iron ingots
+ * - Chainmail armor is craftable using chains
  */
 public class RecipeManager {
     private final JavaPlugin plugin;
@@ -30,8 +32,16 @@ public class RecipeManager {
         registerIronLeggings();
         registerIronBoots();
 
-        plugin.getLogger().info("Custom iron armor recipes registered (iron blocks).");
+        // Register chainmail armor recipes using chains
+        registerChainmailHelmet();
+        registerChainmailChestplate();
+        registerChainmailLeggings();
+        registerChainmailBoots();
+
+        plugin.getLogger().info("Custom recipes registered (iron blocks + chainmail crafting).");
     }
+
+    // ── Iron Armor (Iron Blocks) ──
 
     private void registerIronHelmet() {
         NamespacedKey key = new NamespacedKey(plugin, "iron_helmet");
@@ -62,6 +72,40 @@ public class RecipeManager {
         ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.IRON_BOOTS));
         recipe.shape("B B", "B B");
         recipe.setIngredient('B', Material.IRON_BLOCK);
+        Bukkit.addRecipe(recipe);
+    }
+
+    // ── Chainmail Armor (Chains) ──
+
+    private void registerChainmailHelmet() {
+        NamespacedKey key = new NamespacedKey(plugin, "chainmail_helmet");
+        ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.CHAINMAIL_HELMET));
+        recipe.shape("CCC", "C C");
+        recipe.setIngredient('C', Material.CHAIN);
+        Bukkit.addRecipe(recipe);
+    }
+
+    private void registerChainmailChestplate() {
+        NamespacedKey key = new NamespacedKey(plugin, "chainmail_chestplate");
+        ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.CHAINMAIL_CHESTPLATE));
+        recipe.shape("C C", "CCC", "CCC");
+        recipe.setIngredient('C', Material.CHAIN);
+        Bukkit.addRecipe(recipe);
+    }
+
+    private void registerChainmailLeggings() {
+        NamespacedKey key = new NamespacedKey(plugin, "chainmail_leggings");
+        ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.CHAINMAIL_LEGGINGS));
+        recipe.shape("CCC", "C C", "C C");
+        recipe.setIngredient('C', Material.CHAIN);
+        Bukkit.addRecipe(recipe);
+    }
+
+    private void registerChainmailBoots() {
+        NamespacedKey key = new NamespacedKey(plugin, "chainmail_boots");
+        ShapedRecipe recipe = new ShapedRecipe(key, new ItemStack(Material.CHAINMAIL_BOOTS));
+        recipe.shape("C C", "C C");
+        recipe.setIngredient('C', Material.CHAIN);
         Bukkit.addRecipe(recipe);
     }
 

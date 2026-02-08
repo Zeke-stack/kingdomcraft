@@ -5,6 +5,7 @@ import com.kingdomcraft.data.KingdomData;
 import com.kingdomcraft.discord.DiscordWebhook;
 import com.kingdomcraft.listeners.ChatSyncListener;
 import com.kingdomcraft.listeners.DeathListener;
+import com.kingdomcraft.listeners.DetailsListener;
 import com.kingdomcraft.listeners.JoinLeaveListener;
 import com.kingdomcraft.npc.NPCListener;
 import com.kingdomcraft.npc.NPCManager;
@@ -40,6 +41,13 @@ public class KingdomCraft extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ChatSyncListener(this), this);
         getServer().getPluginManager().registerEvents(new JoinLeaveListener(this), this);
         getServer().getPluginManager().registerEvents(new NPCListener(this, npcManager), this);
+        
+        // Details — small immersive features
+        DetailsListener detailsListener = new DetailsListener(this);
+        getServer().getPluginManager().registerEvents(detailsListener, this);
+        
+        // Campfire healing tick (every 3 seconds = 60 ticks)
+        getServer().getScheduler().runTaskTimer(this, detailsListener::tickCampfireHealing, 100L, 60L);
         
         // Register commands
         registerCommands();

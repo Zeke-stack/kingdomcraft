@@ -171,13 +171,13 @@ client.once('clientReady', async () => {
         console.error('[Bot] Command deploy error:', err.message);
     }
     
-    // Connect RCON after delay (MC server needs time to start RCON listener)
-    console.log('[Bot] Waiting 45s for MC server RCON to be ready...');
+    // Connect RCON (MC server is external on PebbleHost)
+    console.log('[Bot] Connecting to RCON at ' + (process.env.RCON_HOST || '198.50.225.43') + '...');
     setTimeout(() => {
         rcon.connect().catch(err => {
             console.error('[Bot] RCON initial connect failed (will retry):', err.message);
         });
-    }, 45000);
+    }, 5000);
 
     // Initial status
     client.user.setPresence({

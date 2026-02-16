@@ -3,7 +3,7 @@ const { Rcon } = require('rcon-client');
 class RconManager {
     constructor() {
         this.rcon = null;
-        this.host = process.env.RCON_HOST || 'localhost';
+        this.host = process.env.RCON_HOST || '198.50.225.43';
         this.port = parseInt(process.env.RCON_PORT || '25575');
         this.password = process.env.RCON_PASSWORD || 'kc-rcon-2025';
         this.connected = false;

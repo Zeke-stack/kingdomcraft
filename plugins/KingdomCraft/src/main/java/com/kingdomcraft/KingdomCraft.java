@@ -2,6 +2,7 @@ package com.kingdomcraft;
 
 import com.kingdomcraft.commands.*;
 import com.kingdomcraft.data.KingdomData;
+import com.kingdomcraft.discord.BridgeManager;
 import com.kingdomcraft.discord.DiscordWebhook;
 import com.kingdomcraft.listeners.ChatSyncListener;
 import com.kingdomcraft.listeners.DeathListener;
@@ -15,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class KingdomCraft extends JavaPlugin {
     private KingdomData kingdomData;
     private DiscordWebhook discordWebhook;
+    private BridgeManager bridgeManager;
     private NPCManager npcManager;
     private RecipeManager recipeManager;
     
@@ -28,6 +30,9 @@ public class KingdomCraft extends JavaPlugin {
         
         // Initialize Discord webhook
         discordWebhook = new DiscordWebhook(this);
+        
+        // Initialize HTTP bridge to Discord bot (replaces RCON)
+        bridgeManager = new BridgeManager(this);
         
         // Initialize NPC manager
         npcManager = new NPCManager(this);
@@ -65,6 +70,11 @@ public class KingdomCraft extends JavaPlugin {
         if (discordWebhook.isEnabled()) {
             discordWebhook.sendServerStatus("start");
         }
+        
+        // Start bridge polling (after a short delay to let server finish loading)
+        if (bridgeManager.isEnabled()) {
+            getServer().getScheduler().runTaskLater(this, () -> bridgeManager.start(), 100L);
+        }
     }
     
     @Override
@@ -80,6 +90,10 @@ public class KingdomCraft extends JavaPlugin {
         
         if (discordWebhook != null) {
             discordWebhook.shutdown();
+        }
+        
+        if (bridgeManager != null) {
+            bridgeManager.stop();
         }
         
         getLogger().info("KingdomCraft has been disabled!");

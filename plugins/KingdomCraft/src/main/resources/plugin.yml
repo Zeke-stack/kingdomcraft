@@ -1,76 +1,41 @@
 name: KingdomCraft
-version: 1.0.0
+version: 4.0.0
 main: com.kingdomcraft.KingdomCraft
 api-version: '1.21'
 author: KingdomCraft Server
-description: Kingdom management system with death mechanics and character creation
+description: Character system with faction selection and permanent death — Year 1835
 
 commands:
   revive:
-    description: Revive a dead player
+    description: Revive a dead player (restores inventory + position)
     usage: /revive <player>
     permission: kingdomcraft.staff.revive
   createcharacter:
-    description: Create a new character after death
-    usage: /createcharacter <name> <personality>
-  createkingdom:
-    description: Create a new kingdom
-    usage: /createkingdom <name>
-    permission: kingdomcraft.staff.createkingdom
-  deletekingdom:
-    description: Delete a kingdom
-    usage: /deletekingdom <kingdom>
-    permission: kingdomcraft.staff.deletekingdom
-  transferkingdom:
-    description: Transfer kingdom ownership
-    usage: /transferkingdom <kingdom> <player>
-    permission: kingdomcraft.staff.transferkingdom
-  renamekingdom:
-    description: Rename your kingdom
-    usage: /renamekingdom <name>
-    permission: kingdomcraft.leader.rename
-  reqlistkingdom:
-    description: List all join requests
-    usage: /reqlistkingdom
-    permission: kingdomcraft.leader
-  reqacceptkingdom:
-    description: Accept a join request
-    usage: /reqacceptkingdom <player>
-    permission: kingdomcraft.leader
-  reqdenykingdom:
-    description: Deny a join request
-    usage: /reqdenykingdom <player>
-    permission: kingdomcraft.leader
-  reqacceptallkingdom:
-    description: Accept all join requests
-    usage: /reqacceptallkingdom
-    permission: kingdomcraft.leader
-  reqdenyallkingdom:
-    description: Deny all join requests
-    usage: /reqdenyallkingdom
-    permission: kingdomcraft.leader
-  kickkingdom:
-    description: Kick a player from kingdom
-    usage: /kickkingdom <player>
-    permission: kingdomcraft.leader
-  reqoffkingdom:
-    description: Disable join requests
-    usage: /reqoffkingdom
-    permission: kingdomcraft.leader
-  reqonkingdom:
-    description: Enable join requests
-    usage: /reqonkingdom
-    permission: kingdomcraft.leader
-  kingdomlist:
-    description: List all kingdom members
-    usage: /kingdomlist
-    permission: kingdomcraft.leader
-  leavekingdom:
-    description: Leave your current kingdom
-    usage: /leavekingdom
-  joinkingdom:
-    description: Request to join a kingdom
-    usage: /joinkingdom <kingdom>
+    description: Create a new identity after death
+    usage: /createcharacter <first> <last> <age> <ethnicity> <gender>
+  joinplace:
+    description: Join a faction from the selection book
+    usage: /joinplace <name>
+  addplace:
+    description: Create a faction/place
+    usage: /addplace <type> <name>
+    permission: kingdomcraft.staff.places
+  listplace:
+    description: List all factions/places
+    usage: /listplace <type|all>
+    permission: kingdomcraft.staff.places
+  removeplace:
+    description: Remove a faction/place
+    usage: /removeplace <type> <name>
+    permission: kingdomcraft.staff.places
+  addteleport:
+    description: Add a spawn point to a place
+    usage: /addteleport <place> <x> <y> <z> <rotation>
+    permission: kingdomcraft.staff.places
+  removeteleport:
+    description: Remove a spawn point from a place
+    usage: /removeteleport <place> <x> <y> <z> <rotation>
+    permission: kingdomcraft.staff.places
   createnpc:
     description: Create a travel NPC at your location
     usage: /createnpc <id> <display name>
@@ -96,24 +61,9 @@ permissions:
   kingdomcraft.staff.revive:
     description: Allows reviving dead players
     default: op
-  kingdomcraft.staff.createkingdom:
-    description: Allows creating kingdoms
+  kingdomcraft.staff.places:
+    description: Allows managing factions/places and teleport points
     default: op
-  kingdomcraft.staff.deletekingdom:
-    description: Allows deleting kingdoms
-    default: op
-  kingdomcraft.staff.transferkingdom:
-    description: Allows transferring kingdom ownership
-    default: op
-  kingdomcraft.leader:
-    description: Kingdom leader permissions
-    default: false
-  kingdomcraft.leader.rename:
-    description: Allows renaming kingdom
-    default: false
-  kingdomcraft.protected:
-    description: Marks a kingdom as protected (3-day immunity)
-    default: false
   kingdomcraft.staff.npc:
     description: Allows creating and managing travel NPCs
     default: op

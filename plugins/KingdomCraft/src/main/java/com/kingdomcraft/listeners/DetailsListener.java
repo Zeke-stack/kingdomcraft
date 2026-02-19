@@ -1,7 +1,6 @@
 package com.kingdomcraft.listeners;
 
 import com.kingdomcraft.KingdomCraft;
-import com.kingdomcraft.data.Kingdom;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -28,7 +27,6 @@ import java.util.*;
  */
 public class DetailsListener implements Listener {
     private final KingdomCraft plugin;
-    private final Map<UUID, Long> lastActionBarUpdate = new HashMap<>();
 
     public DetailsListener(KingdomCraft plugin) {
         this.plugin = plugin;
@@ -162,32 +160,6 @@ public class DetailsListener implements Listener {
             if (event.getDismounted() instanceof ArmorStand stand && stand.isMarker()) {
                 stand.remove();
             }
-        }
-    }
-
-    // ── 6. Action bar showing kingdom name while playing ──
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-
-        // Throttle to once every 5 seconds
-        long now = System.currentTimeMillis();
-        Long last = lastActionBarUpdate.get(uuid);
-        if (last != null && now - last < 5000) return;
-        lastActionBarUpdate.put(uuid, now);
-
-        Kingdom kingdom = plugin.getKingdomData().getPlayerKingdom(uuid);
-        if (kingdom != null) {
-            boolean isLeader = kingdom.isLeader(uuid);
-            Component bar = Component.text(kingdom.getName())
-                    .color(NamedTextColor.GOLD)
-                    .decoration(TextDecoration.BOLD, true);
-            if (isLeader) {
-                bar = Component.text("Crown of ").color(NamedTextColor.GRAY)
-                        .append(bar);
-            }
-            player.sendActionBar(bar);
         }
     }
 

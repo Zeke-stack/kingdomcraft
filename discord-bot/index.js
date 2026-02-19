@@ -30,7 +30,7 @@ const client = new Client({
     ]
 });
 
-// ─── Command Queue (replaces RCON) ───
+// ─── Command Queue (HTTP Bridge) ───
 const commandQueue = [];
 let commandIdCounter = 1;
 const commandResults = new Map();
@@ -102,13 +102,14 @@ async function updateStatusEmbed() {
         const statusDot = serverOnline ? '🟢' : '🔴';
 
         const embed = new EmbedBuilder()
-            .setTitle('KingdomCraft Server')
+            .setTitle('CONTINENTS')
             .setColor(serverOnline ? 0x00ff00 : 0xff0000)
             .setDescription(
                 `${statusDot} **${status}**\n\n` +
                 `**Players:** ${playerCount}\n` +
                 `**IP:** \`continents.cc\`\n` +
-                `**Version:** Paper 1.21.1`
+                `**Version:** Paper 1.21.1\n` +
+                `**Era:** 1835`
             )
             .setFooter({ text: 'Last updated' })
             .setTimestamp();
@@ -133,13 +134,12 @@ async function updateStatusEmbed() {
 
 // ─── Slash Commands ───
 const commands = [
-    new SlashCommandBuilder().setName('status').setDescription('Check Minecraft server status'),
+    new SlashCommandBuilder().setName('status').setDescription('Check server status'),
     new SlashCommandBuilder().setName('players').setDescription('List online players'),
-    new SlashCommandBuilder().setName('say').setDescription('Send a message to the Minecraft server')
+    new SlashCommandBuilder().setName('say').setDescription('Send a message to the server')
         .addStringOption(opt => opt.setName('message').setDescription('Message to send').setRequired(true)),
     new SlashCommandBuilder().setName('cmd').setDescription('Run a server command (staff only)')
         .addStringOption(opt => opt.setName('command').setDescription('Command to run').setRequired(true)),
-    new SlashCommandBuilder().setName('kingdoms').setDescription('List all kingdoms on the server'),
     new SlashCommandBuilder().setName('whitelist').setDescription('Manage whitelist (staff only)')
         .addStringOption(opt => opt.setName('action').setDescription('add/remove').setRequired(true)
             .addChoices({ name: 'add', value: 'add' }, { name: 'remove', value: 'remove' }))
@@ -173,7 +173,7 @@ client.once('clientReady', async () => {
         console.error('[Bot] Command deploy error:', err.message);
     }
 
-    console.log('[Bot] Using HTTP bridge (no RCON). MC plugin will poll for commands.');
+    console.log('[Bot] Using HTTP bridge. MC plugin will poll for commands.');
 
     client.user.setPresence({
         activities: [{ name: 'Starting up...', type: ActivityType.Watching }],
@@ -229,7 +229,7 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild || interaction.guild.id !== GUILD_ID) {
-        await interaction.reply({ content: '❌ This bot only works in the KingdomCraft server.', ephemeral: true });
+        await interaction.reply({ content: '❌ This bot only works in the Continents server.', ephemeral: true });
         return;
     }
 
@@ -241,18 +241,19 @@ client.on('interactionCreate', async (interaction) => {
     switch (commandName) {
         case 'status': {
             const embed = new EmbedBuilder()
-                .setTitle('KingdomCraft Server Status')
+                .setTitle('CONTINENTS — Server Status')
                 .setColor(serverOnline ? (serverLocked ? 0xff8800 : 0x00ff00) : 0xff0000)
                 .addFields(
                     { name: 'Status', value: serverOnline ? (serverLocked ? 'Locked' : 'Online') : 'Offline', inline: true },
                     { name: 'Players', value: `${playerCount}`, inline: true },
                     { name: 'IP', value: '`continents.cc`', inline: true },
                     { name: 'Version', value: 'Paper 1.21.1', inline: true },
+                    { name: 'Era', value: '1835', inline: true },
                     { name: 'Bridge', value: isServerOnline() ? 'Connected' : 'Disconnected', inline: true },
                     { name: 'Lock', value: serverLocked ? 'Locked' : 'Open', inline: true },
                 )
                 .setTimestamp()
-                .setFooter({ text: 'KingdomCraft' });
+                .setFooter({ text: 'Continents' });
             await interaction.reply({ embeds: [embed] });
             break;
         }
@@ -319,21 +320,6 @@ client.on('interactionCreate', async (interaction) => {
             break;
         }
 
-        case 'kingdoms': {
-            const embed = new EmbedBuilder()
-                .setTitle('Kingdoms')
-                .setColor(0xffcc00)
-                .setDescription('Use the server to view kingdom details.\nKingdom data is managed in-game by event staff.')
-                .addFields(
-                    { name: 'Create Kingdom', value: '`/createkingdom <name> <leader>` (Event Staff)', inline: false },
-                    { name: 'Join Kingdom', value: '`/joinkingdom <kingdom>` (All Players)', inline: false },
-                    { name: 'Kingdom List', value: '`/kingdomlist` (Kingdom Leaders)', inline: false },
-                )
-                .setTimestamp();
-            await interaction.reply({ embeds: [embed] });
-            break;
-        }
-
         case 'whitelist': {
             if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 await interaction.reply({ content: '❌ You need Administrator permissions.', ephemeral: true });
@@ -358,7 +344,7 @@ client.on('interactionCreate', async (interaction) => {
 
         case 'serverip': {
             const embed = new EmbedBuilder()
-                .setTitle('KingdomCraft Server')
+                .setTitle('CONTINENTS')
                 .setColor(0x00ff88)
                 .addFields(
                     { name: 'Server IP', value: '`continents.cc`', inline: true },
@@ -367,7 +353,7 @@ client.on('interactionCreate', async (interaction) => {
                 )
                 .setDescription('Connect using Minecraft Java Edition 1.21.1')
                 .setTimestamp()
-                .setFooter({ text: 'KingdomCraft' });
+                .setFooter({ text: 'Continents' });
             await interaction.reply({ embeds: [embed] });
             break;
         }
@@ -465,7 +451,7 @@ app.post('/bridge/result', bridgeAuth, (req, res) => {
     res.json({ ok: true });
 });
 
-// ─── MC Webhook Endpoints (from KingdomCraft plugin) ───
+// ─── MC Webhook Endpoints (from Continents plugin) ───
 
 app.post('/mc/chat', async (req, res) => {
     const { player, message } = req.body;
@@ -500,95 +486,34 @@ app.post('/mc/join', async (req, res) => {
 });
 
 app.post('/mc/death', async (req, res) => {
-    const { player, message, isKing } = req.body;
+    const { player, message } = req.body;
     try {
         if (CHAT_CHANNEL_ID) {
             const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
             if (channel) {
-                if (isKing) {
-                    const embed = new EmbedBuilder()
-                        .setTitle('The King Has Died!')
-                        .setColor(0xff0000)
-                        .setDescription(`**${player}** has fallen.\nEvent staff will determine the next leader.`)
-                        .setTimestamp();
-                    await channel.send({ embeds: [embed] });
-                } else {
-                    await channel.send(`**${player}** has died. ${message || ''}`);
-                }
+                const embed = new EmbedBuilder()
+                    .setTitle('Character Death')
+                    .setColor(0xff0000)
+                    .setDescription(`**${player}** has perished.\n${message || 'Unknown cause'}`)
+                    .setFooter({ text: 'Permanent death \u2014 character must be recreated' })
+                    .setTimestamp();
+                await channel.send({ embeds: [embed] });
             }
         }
         if (EVENTS_CHANNEL_ID) {
             const evChannel = await client.channels.fetch(EVENTS_CHANNEL_ID);
             if (evChannel) {
                 const embed = new EmbedBuilder()
-                    .setTitle(isKing ? 'KING DEATH' : 'Player Death')
-                    .setColor(isKing ? 0xff0000 : 0x888888)
+                    .setTitle('Character Death')
+                    .setColor(0xff0000)
                     .setDescription(`**${player}**\n${message || 'Unknown cause'}`)
                     .setTimestamp();
                 await evChannel.send({ embeds: [embed] });
             }
         }
-        await log('Death', `**${player}**: ${message || 'Unknown cause'}${isKing ? ' **[KING]**' : ''}`, 0xff0000);
+        await log('Death', `**${player}**: ${message || 'Unknown cause'}`, 0xff0000);
     } catch (err) {
         console.error('[Webhook] Death error:', err.message);
-    }
-    res.sendStatus(200);
-});
-
-app.post('/mc/kingdom', async (req, res) => {
-    const { action, kingdom, player, message } = req.body;
-    try {
-        const embed = new EmbedBuilder()
-            .setColor(0xffcc00)
-            .setTimestamp();
-
-        switch (action) {
-            case 'created':
-                embed.setTitle('New Kingdom Established!')
-                    .setDescription(`**${kingdom}** has been founded by **${player}**!\n3 days of protection active.`);
-                break;
-            case 'destroyed':
-                embed.setTitle('Kingdom Has Fallen')
-                    .setColor(0xff0000)
-                    .setDescription(`The kingdom of **${kingdom}** has been destroyed.`);
-                break;
-            case 'leadership_transferred':
-                embed.setTitle('Leadership Transfer')
-                    .setDescription(`**${player}** is now the leader of **${kingdom}**.`);
-                break;
-            case 'member_joined':
-                embed.setTitle('New Kingdom Member')
-                    .setDescription(`**${player}** joined **${kingdom}**.`);
-                break;
-            case 'member_left':
-                embed.setTitle('Kingdom Member Left')
-                    .setDescription(`**${player}** left **${kingdom}**.`);
-                break;
-            case 'member_kicked':
-                embed.setTitle('Member Kicked')
-                    .setColor(0xff4444)
-                    .setDescription(`**${player}** was kicked from **${kingdom}**.`);
-                break;
-            case 'renamed':
-                embed.setTitle('Kingdom Renamed')
-                    .setDescription(`**${kingdom}**`);
-                break;
-            default:
-                embed.setTitle('Kingdom Event')
-                    .setDescription(message || `${action} - ${kingdom} - ${player}`);
-        }
-
-        if (CHAT_CHANNEL_ID) {
-            const channel = await client.channels.fetch(CHAT_CHANNEL_ID);
-            if (channel) await channel.send({ embeds: [embed] });
-        }
-        if (EVENTS_CHANNEL_ID) {
-            const evChannel = await client.channels.fetch(EVENTS_CHANNEL_ID);
-            if (evChannel) await evChannel.send({ embeds: [embed] });
-        }
-        await log('Kingdom', `**${action}** | Kingdom: **${kingdom}** | Player: **${player || 'N/A'}**`, 0xffcc00);
-    } catch (err) {
-        console.error('[Webhook] Kingdom error:', err.message);
     }
     res.sendStatus(200);
 });
@@ -602,14 +527,14 @@ app.post('/mc/server', async (req, res) => {
             serverOnline = true;
             embed.setTitle('Server Online')
                 .setColor(0x00ff00)
-                .setDescription('KingdomCraft server is now online!\nConnect: `continents.cc`');
+                .setDescription('Continents server is now online!\nConnect: `continents.cc`');
         } else if (action === 'stop') {
             serverOnline = false;
             playerCount = 0;
             serverLocked = false;
             embed.setTitle('Server Offline')
                 .setColor(0xff0000)
-                .setDescription('KingdomCraft server has gone offline.');
+                .setDescription('Continents server has gone offline.');
         }
 
         if (CHAT_CHANNEL_ID) {
@@ -659,7 +584,7 @@ app.get('/panel/status', panelAuth, (req, res) => {
         serverOnline,
         playerCount,
         serverLocked,
-        rconConnected: isServerOnline()
+        bridgeConnected: isServerOnline()
     });
 });
 

@@ -1,18 +1,14 @@
-# KingdomCraft Configuration
+# KingdomCraft Configuration — Year 1835
 
 # Discord Bot Integration
 # Set the URL of your Discord bot's API endpoint
 # This is the Railway URL of your Discord bot service
 # Example: https://your-bot.up.railway.app
-discord-bot-url: ""
+discord-bot-url: "https://kingdomcraft-production.up.railway.app"
 
 # Death System
-# Whether death is permanent (player becomes spectator)
+# Whether death is permanent (player becomes spectator until revive or new character)
 permanent-death: true
-
-# Kingdom Protection
-# How many days new kingdoms are protected from attacks
-new-kingdom-protection-days: 3
 
 # Character System
 # Whether players must create a character before playing

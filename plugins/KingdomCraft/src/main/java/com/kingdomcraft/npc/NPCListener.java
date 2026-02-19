@@ -51,7 +51,7 @@ public class NPCListener implements Listener {
         event.setCancelled(true);
 
         // Check if player is dead
-        if (plugin.getKingdomData().isPlayerDead(player.getUniqueId())) {
+        if (plugin.getCharacterData().isPlayerDead(player.getUniqueId())) {
             player.sendMessage(Component.text("You cannot travel while dead.")
                     .color(NamedTextColor.RED));
             return;

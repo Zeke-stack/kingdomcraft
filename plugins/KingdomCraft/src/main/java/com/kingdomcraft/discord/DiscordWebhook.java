@@ -67,14 +67,6 @@ public class DiscordWebhook {
         post("/mc/death", data);
     }
 
-    public void sendKingdomEvent(String action, String kingdom, String player) {
-        Map<String, String> data = new HashMap<>();
-        data.put("action", action);
-        data.put("kingdom", kingdom);
-        data.put("player", player != null ? player : "");
-        post("/mc/kingdom", data);
-    }
-
     public void sendServerStatus(String action) {
         Map<String, String> data = new HashMap<>();
         data.put("action", action);
